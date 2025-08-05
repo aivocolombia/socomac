@@ -11,11 +11,14 @@ DIAS_SEMANA = {
     "Sunday": "Domingo"
 }
 
-def build_system_prompt() -> str:
-    """Devuelve SYSTEM_PROMPT con la fecha/hora actual (zona Bogotá/Lima)."""
+def build_system_prompt(phone: str = None) -> str:
+    """Devuelve SYSTEM_PROMPT con la fecha/hora actual (zona Bogotá/Lima) y el número de teléfono del usuario."""
     now = datetime.now(ZoneInfo("America/Bogota"))
     dia_semana_es = DIAS_SEMANA[now.strftime("%A")]
     hora_actual = f"{dia_semana_es}, {now.strftime('%d/%m/%Y %H:%M')}"
+    
+    # Usar el número de teléfono proporcionado o un placeholder
+    phone_number = phone if phone else "{phone}"
     
     return f"""
 📅 Hora y fecha actual: {hora_actual}
@@ -37,7 +40,8 @@ Casos:
 5. Consultar estado de la caja
 6. Consultar estado de la caja
 7. Consultar estado de la caja
-
+8. Limpiar memoria:
+  - Si el usuario te pide limpiar la memoria, limpia la memoria de la conversacion con el usuario con la tool limpiar_memoria. para borrar ejecutas la tool con el telefono : {phone_number}
 
 
 
