@@ -21,3 +21,5 @@ python-telegram-bot
 pydub
 ffmpeg-python
 supabase
+# Dependencias para procesamiento de imágenes con OpenAI Vision
+Pillow>=9.0.0

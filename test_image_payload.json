@@ -1,0 +1,33 @@
+{
+  "messages": [
+    {
+      "id": "OjI5zPXtkQlm6g-gOWFdSGxaw",
+      "from_me": false,
+      "type": "image",
+      "chat_id": "573195792747@s.whatsapp.net",
+      "timestamp": 1754416293,
+      "source": "mobile",
+      "image": {
+        "id": "jpeg-3a3239ccf5ed910966ea-80e5857521b16b",
+        "mime_type": "image/jpeg",
+        "file_size": 46793,
+        "sha256": "4o5LVrenal7p1KpDxgcmUGPb4Y1KsyKurUuihOqR9WA=",
+        "link": "https://s3.eu-central-1.wasabisys.com/in-files/573027367797/jpeg-3a3239ccf5ed910966ea-80e5857521b16b.jpeg",
+        "width": 724,
+        "height": 1280,
+        "preview": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABsSFBcUERsXFhceHBsgKEIrKCUlKFE6PTBCYFVlZF9VXVtqeJmBanGQc1tdhbWGkJ6jq62rZ4C8ybqmx5moq6T/2wBDARweHigjKE4rK06kbl1upKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKT/wgARCABIACkDASIAAhEBAxEB/8QAGQAAAwEBAQAAAAAAAAAAAAAAAAIDAQQF/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAH/2gAMAwEAAhADEAAAAPGxrFeO4kDcVmdia0URaTKutCQ8wm6FHAQ0FSkx8AADFA//xAAUEQEAAAAAAAAAAAAAAAAAAAAw/9oACAECAQE/AH//xAAXEQEAAwAAAAAAAAAAAAAAAAABABEw/9oACAEDAQE/AIFbf//EACYQAAICAgEDAgcAAAAAAAAAAAECAAMREhAhMVEEkSAiIzJBUlP/2gAIAQEAAT8A4rq9MfRl2b6nwKQGBIyIHQ9RUJsv8h7zZQOtQ947Bmyq6jxwtbMMgQV2DsIUs8Qo57w1kDPFJfXCxmsXucQ3P5m5hc4I4qR2XKmGmw9zmGsg4Jmh8woQM54p6r9xE1P7mHX8uczYwsccVq5X5e0K3GFGz1mjQowGeKNtejYhtcEgNmbmbmFjjhLCg6GbCbCbCFhjj//+AAMA/9k="
+      },
+      "context": {
+        "forwarded": true,
+        "forwarding_score": 3
+      },
+      "from": "573195792747",
+      "from_name": "Camilo Mora"
+    }
+  ],
+  "event": {
+    "type": "messages",
+    "event": "post"
+  },
+  "channel_id": "ANTMAN-S5XM6"
+} 

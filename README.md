@@ -1,11 +1,12 @@
-# Socomac - AI Agent con Soporte de Audio
+# Socomac - AI Agent con Soporte de Audio e Imágenes
 
-Socomac es un agente de inteligencia artificial que puede procesar mensajes de texto y audio a través de WhatsApp Business API (Whapi).
+Socomac es un agente de inteligencia artificial que puede procesar mensajes de texto, audio e imágenes a través de WhatsApp Business API (Whapi).
 
 ## 🚀 Características
 
 - **Procesamiento de Texto**: Maneja mensajes de texto normales
 - **Procesamiento de Audio**: Transcribe mensajes de voz usando OpenAI Whisper
+- **Procesamiento de Imágenes**: Extrae texto de imágenes usando OpenAI Vision API
 - **Integración con Whapi**: Conecta con WhatsApp Business API
 - **Agente de IA**: Procesa mensajes con un agente de inteligencia artificial
 - **Respuestas Inteligentes**: Genera respuestas contextuales y relevantes
@@ -14,6 +15,7 @@ Socomac es un agente de inteligencia artificial que puede procesar mensajes de t
 
 - **FastAPI**: Framework web para la API
 - **OpenAI Whisper**: Transcripción de audio
+- **OpenAI Vision API**: Extracción de texto de imágenes
 - **Whapi**: API de WhatsApp Business
 - **LangChain**: Framework para agentes de IA
 - **MongoDB**: Base de datos (opcional)
@@ -65,7 +67,7 @@ uvicorn app.main:app --reload
 
 3. **Probar la funcionalidad**:
 ```bash
-python test_audio_webhook.py
+python test_webhook_simple.py
 ```
 
 ## 📁 Estructura del Proyecto
@@ -83,6 +85,7 @@ socomac/
 │   │   └── tools.py            # Herramientas del agente
 │   ├── services/
 │   │   ├── audio_processor.py  # Procesamiento de audio
+│   │   ├── image_processor.py  # Procesamiento de imágenes
 │   │   ├── sender.py           # Envío de mensajes
 │   │   └── telegram.py         # Integración con Telegram
 │   └── main.py                 # Aplicación principal
@@ -91,91 +94,66 @@ socomac/
 └── README.md
 ```
 
-## 🎵 Funcionalidad de Audio
+## 🔄 Flujo de Procesamiento
 
-### Procesamiento de Mensajes de Voz
+### Mensajes de Texto
+1. Recibe mensaje de texto desde Whapi
+2. Procesa con el agente de IA
+3. Envía respuesta formateada
 
-El sistema puede procesar mensajes de voz y audio de WhatsApp:
+### Mensajes de Audio/Voz
+1. Recibe mensaje de audio desde Whapi
+2. Descarga el archivo de audio
+3. Transcribe usando OpenAI Whisper
+4. Procesa el texto con el agente de IA
+5. Envía respuesta formateada
 
-1. **Recepción**: El webhook recibe mensajes de voz/audio desde Whapi
-2. **Detección**: Identifica si es mensaje de voz (`voice`) o audio (`audio`)
-3. **Descarga**: Descarga el archivo de audio temporalmente
-4. **Transcripción**: Usa OpenAI Whisper para transcribir el audio a texto
-5. **Procesamiento**: Envía el texto transcrito al agente de IA
-6. **Respuesta**: Genera y envía la respuesta al usuario
-7. **Limpieza**: Elimina archivos temporales
-
-### Formatos Soportados
-
-- **Audio**: OGG, MP3, WAV, M4A, FLAC, WEBM
-- **Idioma**: Español (configurable)
-- **Duración**: Hasta 25MB (límite de Whisper)
-
-## 🔧 Configuración
-
-### Variables de Entorno
-
-```bash
-# Requeridas
-OPENAI_API_KEY=sk-...
-WHAPI_API_KEY=tu_whapi_key
-
-# Opcionales
-TELEGRAM_KEY=tu_telegram_bot_token
-```
-
-### Configuración del Webhook
-
-El webhook maneja diferentes tipos de mensajes:
-
-- **Texto**: `type: "text"`
-- **Voz**: `type: "voice"` (mensajes de voz de WhatsApp)
-- **Audio**: `type: "audio"` (archivos de audio)
-- **Imagen**: `type: "image"` (no soportado actualmente)
+### Mensajes de Imagen
+1. Recibe mensaje de imagen desde Whapi
+2. Descarga la imagen
+3. Extrae texto usando OpenAI Vision API
+4. Procesa el texto con el agente de IA
+5. Envía respuesta formateada
 
 ## 🧪 Pruebas
 
-Ejecuta las pruebas del webhook:
-
-```bash
-python test_audio_webhook.py
+### Probar con PowerShell
+```powershell
+# Probar mensaje de imagen
+powershell -ExecutionPolicy Bypass -File test_image_powershell.ps1
 ```
 
-## 📝 Logs
+### Probar con Python
+```bash
+# Probar todos los tipos de mensajes
+python test_webhook_simple.py
+```
 
-El sistema registra logs detallados para:
+## 🔧 Configuración del Webhook
 
-- Recepción de mensajes
-- Procesamiento de audio
-- Transcripciones
-- Errores y excepciones
+El webhook acepta los siguientes tipos de mensajes:
 
-## 🤝 Contribuir
+- **text**: Mensajes de texto normales
+- **voice**: Mensajes de voz (audio/ogg)
+- **audio**: Mensajes de audio (otros formatos)
+- **image**: Mensajes de imagen (JPEG, PNG, etc.)
 
-1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
+### Formato de Respuesta
+```json
+{
+  "reply": "ok"
+}
+```
 
-## 📄 Licencia
+## 🐳 Docker
 
-Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para detalles.
+Para ejecutar con Docker:
 
-## 🆘 Soporte
+```bash
+docker build -t socomac .
+docker run -p 8000:8000 socomac
+```
 
-Si tienes problemas o preguntas:
+## 📝 Licencia
 
-1. Revisa los logs del servidor
-2. Verifica la configuración de las variables de entorno
-3. Asegúrate de que FFmpeg esté instalado correctamente
-4. Abre un issue en GitHub
-
-## 🔄 Roadmap
-
-- [ ] Soporte para imágenes
-- [ ] Soporte para documentos
-- [ ] Múltiples idiomas
-- [ ] Cache de transcripciones
-- [ ] Métricas y analytics
-- [ ] Dashboard de administración
+Este proyecto está bajo la Licencia MIT.
