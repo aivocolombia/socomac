@@ -47,3 +47,5 @@ Casos:
 DATOS:
 - los valores son en pesos colombianos.
 - Si llegan valores de tres digitos referenciando un costo es muy posible que sea un abreviativo de ejemplo: 500 de 500.000 pesos.
+
+"""
