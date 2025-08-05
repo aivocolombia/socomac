@@ -1,0 +1,36 @@
+{
+  "messages": [
+    {
+      "content": "hola!",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "human",
+      "name": null,
+      "id": null
+    },
+    {
+      "content": "¡Hola! ¿En qué puedo ayudarte hoy? 😊",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "ai",
+      "name": null,
+      "id": null
+    },
+    {
+      "content": "que puedes hacer?",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "human",
+      "name": null,
+      "id": null
+    },
+    {
+      "content": "¡Hola! Puedo ayudarte con una gran variedad de tareas, como responder preguntas, explicar conceptos, discutir temas, crear textos o incluso aprender cosas nuevas contigo. ¿En qué puedo asistirte hoy? 😊",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "ai",
+      "name": null,
+      "id": null
+    }
+  ]
+}
