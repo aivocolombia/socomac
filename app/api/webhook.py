@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request
 from app.core.agent import get_agent
-from app.services.sender import send_whatsapp_message
+from app.services.sender import send_whatsapp_message, download_whapi_audio_from_link
 from app.core.format_message import TextNormalizer
 import os
 from app.services.sender import send_image_message
@@ -37,25 +37,116 @@ async def whatsapp_webhook(request: Request):
 
     try:
         message_data = body.get("messages", [])[0]
-        message = message_data.get("text", {}).get("body", "")
         phone = message_data.get("from", "")
+        
+        # Verificar si es el número autorizado
         if phone != "573195792747":
             return {"reply": "ok"}
+            
         channel_id = body.get("channel_id", "")
-    except (IndexError, AttributeError, TypeError):
+        
+        # Detectar tipo de mensaje
+        message_type = message_data.get("type", "")
+        message_text = ""
+        
+        if message_type == "text":
+            # Mensaje de texto - lógica actual
+            message_text = message_data.get("text", {}).get("body", "")
+            print(f"📝 Mensaje de texto recibido: {message_text}")
+            
+        elif message_type == "voice":
+            # Mensaje de voz - transcribir y procesar
+            print("🎵 Mensaje de voz recibido")
+            voice_data = message_data.get("voice", {})
+            audio_link = voice_data.get("link")
+            
+            if audio_link:
+                print(f"🔗 Link de audio: {audio_link}")
+                # Descargar el audio usando el link directo
+                audio_file_path = download_whapi_audio_from_link(audio_link)
+                
+                if audio_file_path:
+                    print(f"🎯 Iniciando transcripción del archivo: {audio_file_path}")
+                    # Transcribir el audio
+                    success, transcription = audio_processor.transcribe_audio(audio_file_path, language="es")
+                    
+                    if success:
+                        message_text = transcription
+                        print(f"✅ Transcripción exitosa: '{message_text}'")
+                        print(f"📊 Longitud del texto transcrito: {len(message_text)} caracteres")
+                    else:
+                        print(f"❌ Error en transcripción: {transcription}")
+                        # Limpiar archivo temporal
+                        audio_processor.cleanup_temp_files(audio_file_path)
+                        return {"reply": "No pude entender el mensaje de voz. Por favor, intenta de nuevo o envía un mensaje de texto."}
+                    
+                    # Limpiar archivo temporal
+                    audio_processor.cleanup_temp_files(audio_file_path)
+                    print("🧹 Archivo temporal eliminado")
+                else:
+                    return {"reply": "Error al descargar el mensaje de voz. Por favor, intenta de nuevo."}
+            else:
+                print("❌ No se encontró link de audio en el mensaje")
+                return {"reply": "No se pudo obtener el link del mensaje de voz."}
+                
+        elif message_type == "audio":
+            # Mensaje de audio (no voz) - transcribir y procesar
+            print("🎵 Mensaje de audio recibido")
+            audio_data = message_data.get("audio", {})
+            audio_link = audio_data.get("link")
+            
+            if audio_link:
+                print(f"🔗 Link de audio: {audio_link}")
+                # Descargar el audio usando el link directo
+                audio_file_path = download_whapi_audio_from_link(audio_link)
+                
+                if audio_file_path:
+                    print(f"🎯 Iniciando transcripción del archivo: {audio_file_path}")
+                    # Transcribir el audio
+                    success, transcription = audio_processor.transcribe_audio(audio_file_path, language="es")
+                    
+                    if success:
+                        message_text = transcription
+                        print(f"✅ Transcripción exitosa: '{message_text}'")
+                        print(f"📊 Longitud del texto transcrito: {len(message_text)} caracteres")
+                    else:
+                        print(f"❌ Error en transcripción: {transcription}")
+                        # Limpiar archivo temporal
+                        audio_processor.cleanup_temp_files(audio_file_path)
+                        return {"reply": "No pude entender el audio. Por favor, intenta de nuevo o envía un mensaje de texto."}
+                    
+                    # Limpiar archivo temporal
+                    audio_processor.cleanup_temp_files(audio_file_path)
+                    print("🧹 Archivo temporal eliminado")
+                else:
+                    return {"reply": "Error al descargar el audio. Por favor, intenta de nuevo."}
+            else:
+                print("❌ No se encontró link de audio en el mensaje")
+                return {"reply": "No se pudo obtener el link del audio."}
+                
+        else:
+            # Otros tipos de mensaje (imagen, documento, etc.)
+            print(f"❌ Tipo de mensaje no soportado: {message_type}")
+            return {"reply": "Solo puedo procesar mensajes de texto, voz y audio por ahora."}
+            
+    except (IndexError, AttributeError, TypeError) as e:
+        print(f"❌ Error procesando mensaje: {e}")
         return {"reply": "Formato de mensaje inválido"}
 
-    if not message or not phone or not channel_id:
+    if not message_text or not phone or not channel_id:
         return {"reply": "Faltan datos en el mensaje"}
 
+    print(f"🤖 Procesando con agente de IA: '{message_text}'")
+    # Procesar con el agente de IA
     agent = get_agent(phone)
-    response = agent.run(message)
+    response = agent.run(message_text)
     if not response:
         response = "No pude procesar tu mensaje. Por favor, intenta de nuevo más tarde."
         
+    print(f"🤖 Respuesta del agente: '{response}'")
     response_dict = TextNormalizer().formatear_json(response)
     respuestas = response_dict.get("json", [])
-    print("Respuestas formateadas:", respuestas)
+    print("📤 Respuestas formateadas:", respuestas)
     for item in respuestas:
         message = item["message"]
         image_url = item["image"]
