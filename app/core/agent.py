@@ -64,3 +64,5 @@ def get_agent(phone: str):
         return_intermediate_steps=True,  
         handle_parsing_errors=True       
     )
+    
+    return executor
