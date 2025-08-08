@@ -40,35 +40,43 @@ def nombre_cliente(nombre: str = "", offset: int = 0, limit: int = 10) -> str:
     Returns:
         str: Lista de clientes encontrados con su ID y nombre.
     """
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    try:
+        print(f"🔍 Buscando clientes con nombre: '{nombre}'")
+        conn = get_db_connection()
+        cursor = conn.cursor()
 
-    query = """
-        SELECT DISTINCT
-            c.id_client AS id,
-            c.full_name AS nombre
-        FROM clients c
-        WHERE COALESCE(NULLIF(c.full_name, ''), '') <> ''
-          AND c.full_name ILIKE %s
-        ORDER BY nombre
-        OFFSET %s
-        LIMIT %s
-    """
-    
-    patron_busqueda = f"%{nombre}%" if nombre else "%%"
+        query = """
+            SELECT DISTINCT
+                c.id_client AS id,
+                c.full_name AS nombre
+            FROM clients c
+            WHERE COALESCE(NULLIF(c.full_name, ''), '') <> ''
+              AND c.full_name ILIKE %s
+            ORDER BY nombre
+            OFFSET %s
+            LIMIT %s
+        """
+        
+        patron_busqueda = f"%{nombre}%" if nombre else "%%"
 
-    cursor.execute(query, (patron_busqueda, offset, limit))
-    resultados = cursor.fetchall()
-    conn.close()
+        cursor.execute(query, (patron_busqueda, offset, limit))
+        resultados = cursor.fetchall()
+        conn.close()
 
-    if not resultados:
-        return "No se encontraron clientes con los criterios especificados."
+        if not resultados:
+            return "No se encontraron clientes con los criterios especificados."
 
-    respuesta = []
-    for id_cliente, nombre_cliente in resultados:
-        respuesta.append(f"🆔 ID: {id_cliente} | 👤 Nombre: {nombre_cliente}")
+        respuesta = []
+        for id_cliente, nombre_cliente in resultados:
+            respuesta.append(f"🆔 ID: {id_cliente} | 👤 Nombre: {nombre_cliente}")
 
-    return "\n".join(respuesta)
+        print(f"✅ Encontrados {len(resultados)} clientes")
+        return "\n".join(respuesta)
+        
+    except Exception as e:
+        error_msg = f"Error al consultar clientes: {str(e)}"
+        print(f"❌ {error_msg}")
+        return f"Error al consultar la base de datos: {str(e)}"
 
 
 @tool
@@ -84,37 +92,46 @@ def nombre_empresa(nombre: str = "", offset: int = 0, limit: int = 10) -> str:
     Returns:
         str: Lista de empresas con ID y nombre.
     """
-    # (Opcional) límites sanos para evitar abusos
-    if limit <= 0:
-        limit = 10
-    if limit > 100:
-        limit = 100
-    if offset < 0:
-        offset = 0
+    try:
+        print(f"🏢 Buscando empresas con nombre: '{nombre}'")
+        
+        # (Opcional) límites sanos para evitar abusos
+        if limit <= 0:
+            limit = 10
+        if limit > 100:
+            limit = 100
+        if offset < 0:
+            offset = 0
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
+        conn = get_db_connection()
+        cursor = conn.cursor()
 
-    query = """
-        SELECT DISTINCT
-            c.id_client AS id,
-            c.company   AS nombre
-        FROM clients c
-        WHERE COALESCE(NULLIF(c.company, ''), '') <> ''
-          AND c.company ILIKE %s
-        ORDER BY nombre
-        OFFSET %s
-        LIMIT %s
-    """
+        query = """
+            SELECT DISTINCT
+                c.id_client AS id,
+                c.company   AS nombre
+            FROM clients c
+            WHERE COALESCE(NULLIF(c.company, ''), '') <> ''
+              AND c.company ILIKE %s
+            ORDER BY nombre
+            OFFSET %s
+            LIMIT %s
+        """
 
-    patron = f"%{nombre}%" if nombre else "%%"
+        patron = f"%{nombre}%" if nombre else "%%"
 
-    cursor.execute(query, (patron, offset, limit))
-    rows = cursor.fetchall()
-    conn.close()
+        cursor.execute(query, (patron, offset, limit))
+        rows = cursor.fetchall()
+        conn.close()
 
-    if not rows:
-        return "No se encontraron empresas con los criterios especificados."
+        if not rows:
+            return "No se encontraron empresas con los criterios especificados."
 
-    lines = [f"🆔 ID: {rid} | 🏢 Empresa: {rnom}" for rid, rnom in rows]
-    return "\n".join(lines)
+        lines = [f"🆔 ID: {rid} | 🏢 Empresa: {rnom}" for rid, rnom in rows]
+        print(f"✅ Encontradas {len(rows)} empresas")
+        return "\n".join(lines)
+        
+    except Exception as e:
+        error_msg = f"Error al consultar empresas: {str(e)}"
+        print(f"❌ {error_msg}")
+        return f"Error al consultar la base de datos: {str(e)}"
