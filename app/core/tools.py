@@ -317,7 +317,7 @@ def cuotas_pendientes_por_plan(id_payment_plan: int) -> str:
 @tool
 def registrar_pago(
     id_sales_orders: int,
-    id_payment_installment: int,
+    id_payment_plan: int,
     id_client: int,
     payment_method: str,
     amount: float,
@@ -325,7 +325,6 @@ def registrar_pago(
     notes: str = "",
     segundo_apellido: str = "",
     destiny_bank: str = "",
-    pay_amount_actual: float = 0.0,
     # Campos exclusivos para Transferencia
     proof_number: str = "",
     emission_bank: str = "",
@@ -340,32 +339,8 @@ def registrar_pago(
     cheque_value: float = 0.0
 ) -> str:
     """
-    Registra un pago para una cuota y actualiza su valor acumulado.
-
-    **Métodos de pago soportados (payment_method):**
-      - "Efectivo":
-          - Obligatorio: id_sales_orders, id_payment_installment, id_client, amount
-          - Inserta en payments con payment_method='Efectivo', caja_receipt='Yes'
-      - "Transferencia":
-          - Obligatorio: id_sales_orders, id_payment_installment, id_client, amount, proof_number, emission_bank, emission_date, trans_value
-          - Inserta en payments con payment_method='Transferencia', caja_receipt='No'
-          - Inserta en transfers con los datos adicionales
-      - "Cheque":
-          - Obligatorio: id_sales_orders, id_payment_installment, id_client, amount, cheque_number, bank, emision_date, stimate_collection_date, cheque_value
-          - Inserta en payments con payment_method='Cheque', caja_receipt='No'
-          - Inserta en cheques con los datos adicionales
-
-    **Proceso que sigue la tool:**
-      1. Insertar en `payments` con los datos básicos y `payment_date = CURRENT_DATE`.
-      2. Según `payment_method`:
-         - Si es "Transferencia" → insertar en `transfers`.
-         - Si es "Cheque" → insertar en `cheques`.
-      3. Actualizar `payment_installment` sumando `amount` al valor ya registrado en `pay_amount` y fijando `payment_date = CURRENT_DATE`.
-      
-    **Notas para el agente:**
-      - No solicitar campos innecesarios para el método de pago elegido.
-      - Asegurar que `amount > 0`.
-      - `pay_amount_actual` debe enviarse si ya hay pagos previos en la cuota para poder sumar correctamente.
+    Registra un pago y lo asocia automáticamente a la primera cuota 'Pendiente' 
+    del payment_plan indicado.
     """
     try:
         if amount <= 0:
@@ -375,12 +350,27 @@ def registrar_pago(
         if pm not in ["Efectivo", "Transferencia", "Cheque"]:
             return "Método de pago inválido. Use: Efectivo, Transferencia o Cheque."
 
-        caja_receipt = "Yes" if pm == "Efectivo" else "No"
-
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # 1) Insert en payments
+        # 1) Buscar la primera cuota pendiente del plan
+        cursor.execute("""
+            SELECT id_payment_installment, pay_amount
+            FROM payment_installment
+            WHERE id_payment_plan = %s AND status = 'Pendiente'
+            ORDER BY installment_number ASC
+            LIMIT 1;
+        """, (id_payment_plan,))
+        cuota = cursor.fetchone()
+
+        if not cuota:
+            conn.close()
+            return "No hay cuotas pendientes en este plan."
+
+        id_payment_installment, pay_amount_actual = cuota
+        caja_receipt = "Yes" if pm == "Efectivo" else "No"
+
+        # 2) Insert en payments
         cursor.execute("""
             INSERT INTO payments (
               id_sales_orders,
@@ -402,7 +392,7 @@ def registrar_pago(
         ))
         id_payment = cursor.fetchone()[0]
 
-        # 2) Inserts adicionales según método
+        # 3) Inserts adicionales según método
         if pm == "Transferencia":
             cursor.execute("""
                 INSERT INTO transfers (
@@ -431,7 +421,7 @@ def registrar_pago(
                 VALUES (%s, %s, %s, %s, %s, %s, %s);
             """, (id_payment, cheque_number, bank, emision_date, stimate_collection_date, cheque_value, observations))
 
-        # 3) Update de la cuota
+        # 4) Actualizar la cuota
         nuevo_acumulado = (pay_amount_actual or 0.0) + amount
         cursor.execute("""
             UPDATE payment_installment
@@ -443,7 +433,7 @@ def registrar_pago(
         conn.commit()
         conn.close()
 
-        return f"✅ Pago registrado correctamente. ID Payment: {id_payment} | Nuevo acumulado: {nuevo_acumulado}"
+        return f"✅ Pago registrado en la cuota {id_payment_installment} del plan {id_payment_plan}. ID Payment: {id_payment} | Nuevo acumulado: {nuevo_acumulado}"
 
     except Exception as e:
         return f"❌ Error al registrar el pago: {str(e)}"
