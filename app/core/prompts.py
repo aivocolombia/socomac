@@ -51,6 +51,34 @@ Casos:
 7. consultar planes de pago por cliente con deuda: 
    - tool planes_pago_pendientes_por_cliente 
    - tool montos_a_favor_por_cliente
+8. Uso de registrar_pago
+
+    Cuando uses la tool registrar_pago:
+
+    Paso 1: Determina el método de pago: "Efectivo", "Transferencia" o "Cheque".
+
+    Paso 2: Recoge solo los campos obligatorios para ese método:
+
+    Efectivo:
+    id_sales_orders, id_payment_installment, id_client, amount.
+
+    Transferencia:
+    Todos los campos de Efectivo + proof_number, emission_bank, emission_date, trans_value, observations (si aplica), destiny_bank.
+
+    Cheque:
+    Todos los campos de Efectivo + cheque_number, bank, emision_date, stimate_collection_date, cheque_value, observations (si aplica).
+
+    Paso 3:
+    Si la cuota ya tiene un pago parcial (pay_amount_actual > 0), incluye ese valor para que la tool lo sume al nuevo pago.
+
+    Reglas importantes:
+
+    No pidas información innecesaria que no se use en el método seleccionado.
+
+    Asegúrate de que amount sea un valor mayor que 0.
+
+    El campo notes, segundo_apellido y destiny_bank son opcionales y solo se usan si aportan valor al registro.
+
 
 DATOS:
 - los valores son en pesos colombianos.
