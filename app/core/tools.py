@@ -317,20 +317,20 @@ def cuotas_pendientes_por_plan(id_payment_plan: int) -> str:
 @tool
 def registrar_pago(
     id_sales_orders: int,
-    id_payment_plan: int,
+    id_payment_installment: int,
     id_client: int,
     payment_method: str,
     amount: float,
     # Campos opcionales comunes
     notes: str = "",
     segundo_apellido: str = "",
-    destiny_bank: str = "",
     # Campos exclusivos para Transferencia
     proof_number: str = "",
     emission_bank: str = "",
     emission_date: str = "",
     trans_value: float = 0.0,
     observations: str = "",
+    destiny_bank: str = "",
     # Campos exclusivos para Cheque
     cheque_number: str = "",
     bank: str = "",
@@ -339,8 +339,7 @@ def registrar_pago(
     cheque_value: float = 0.0
 ) -> str:
     """
-    Registra un pago y lo asocia automáticamente a la primera cuota 'Pendiente' 
-    del payment_plan indicado.
+    Registra un pago para una cuota específica (payment_installment) y actualiza su valor acumulado.
     """
     try:
         if amount <= 0:
@@ -353,21 +352,20 @@ def registrar_pago(
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # 1) Buscar la primera cuota pendiente del plan
+        # 1) Consultar monto actual de la cuota
         cursor.execute("""
-            SELECT id_payment_installment, pay_amount
+            SELECT pay_amount
             FROM payment_installment
-            WHERE id_payment_plan = %s AND status = 'Pendiente'
-            ORDER BY installment_number ASC
-            LIMIT 1;
-        """, (id_payment_plan,))
-        cuota = cursor.fetchone()
-
-        if not cuota:
+            WHERE id_payment_installment = %s;
+        """, (id_payment_installment,))
+        row = cursor.fetchone()
+        if not row:
             conn.close()
-            return "No hay cuotas pendientes en este plan."
+            return f"No se encontró la cuota con id_payment_installment = {id_payment_installment}"
 
-        id_payment_installment, pay_amount_actual = cuota
+        pay_amount_actual = row[0] or 0.0
+        nuevo_acumulado = pay_amount_actual + amount
+
         caja_receipt = "Yes" if pm == "Efectivo" else "No"
 
         # 2) Insert en payments
@@ -421,8 +419,7 @@ def registrar_pago(
                 VALUES (%s, %s, %s, %s, %s, %s, %s);
             """, (id_payment, cheque_number, bank, emision_date, stimate_collection_date, cheque_value, observations))
 
-        # 4) Actualizar la cuota
-        nuevo_acumulado = (pay_amount_actual or 0.0) + amount
+        # 4) Actualizar acumulado de la cuota
         cursor.execute("""
             UPDATE payment_installment
             SET pay_amount = %s,
@@ -433,7 +430,7 @@ def registrar_pago(
         conn.commit()
         conn.close()
 
-        return f"✅ Pago registrado en la cuota {id_payment_installment} del plan {id_payment_plan}. ID Payment: {id_payment} | Nuevo acumulado: {nuevo_acumulado}"
+        return f"✅ Pago registrado correctamente. ID Payment: {id_payment} | Nuevo acumulado en la cuota: {nuevo_acumulado}"
 
     except Exception as e:
         return f"❌ Error al registrar el pago: {str(e)}"

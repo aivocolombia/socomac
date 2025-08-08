@@ -51,7 +51,7 @@ Casos:
 7. consultar planes de pago por cliente con deuda: 
    - tool planes_pago_pendientes_por_cliente 
    - tool montos_a_favor_por_cliente
-8.  Uso de registrar_pago
+8.   Uso de registrar_pago
 
     Cuando uses la tool registrar_pago:
 
@@ -60,7 +60,7 @@ Casos:
     Paso 2: Recoge solo los campos obligatorios para ese método:
 
     Efectivo:
-    id_sales_orders, id_payment_plan, id_client, amount.
+    id_sales_orders, id_payment_plan, id_client, id_payment_installment, amount.
 
     Transferencia:
     Todos los campos de Efectivo + proof_number, emission_bank, emission_date, trans_value, observations (si aplica), destiny_bank.
@@ -69,9 +69,11 @@ Casos:
     Todos los campos de Efectivo + cheque_number, bank, emision_date, stimate_collection_date, cheque_value, observations (si aplica).
 
     Paso 3:
-    El campo id_payment_installment ya no se pide.  
-    La tool buscará automáticamente la primera cuota con status 'Pendiente' en el payment_plan indicado.  
-    Si hay más de una, puedes mostrar al usuario la lista para que elija, o tomar la primera por fecha de vencimiento.
+    Cuando el usuario confirme el id_payment_plan:
+      1. Consulta las cuotas con status 'Pendiente' para ese plan.
+      2. Muestra la lista con número de cuota, fecha de vencimiento y valor pendiente.
+      3. Pregunta al usuario a cuál cuota desea afiliar el pago (id_payment_installment).
+      4. Usa ese id_payment_installment al llamar registrar_pago.
 
     Reglas importantes:
     - No pidas información innecesaria que no se use en el método seleccionado.
