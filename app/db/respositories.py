@@ -15,7 +15,7 @@ def get_db_connection():
             password=os.getenv("DB_PASSWORD", "Omnion2025_"),
             host=os.getenv("DB_HOST", "aws-0-us-east-2.pooler.supabase.com"),
             port=int(os.getenv("DB_PORT", "6543")),
-            dbname=os.getenv("DB_NAME", "postgres.jhgvhzxcxyxaiixnqprj"),
+            dbname=os.getenv("DB_NAME", "postgres"),
             client_encoding='utf8'
         )
     except Exception as e:
