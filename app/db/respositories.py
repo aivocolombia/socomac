@@ -26,7 +26,7 @@ def cargar_estado_desde_postgres(phone: str) -> Optional[dict]:
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT name, email FROM leads WHERE phone = %s", (phone,))
+        cursor.execute("SELECT name, email FROM public.leads WHERE phone = %s", (phone,))
         row = cursor.fetchone()
         conn.close()
         if row:

@@ -49,7 +49,7 @@ def nombre_cliente(nombre: str = "", offset: int = 0, limit: int = 10) -> str:
             SELECT DISTINCT
                 c.id_client AS id,
                 c.full_name AS nombre
-            FROM clients c
+            FROM public.clients c
             WHERE COALESCE(NULLIF(c.full_name, ''), '') <> ''
               AND c.full_name ILIKE %s
             ORDER BY nombre
@@ -110,7 +110,7 @@ def nombre_empresa(nombre: str = "", offset: int = 0, limit: int = 10) -> str:
             SELECT DISTINCT
                 c.id_client AS id,
                 c.company   AS nombre
-            FROM clients c
+            FROM public.clients c
             WHERE COALESCE(NULLIF(c.company, ''), '') <> ''
               AND c.company ILIKE %s
             ORDER BY nombre
