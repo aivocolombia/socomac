@@ -17,7 +17,6 @@ def build_system_prompt(phone: str = None) -> str:
     dia_semana_es = DIAS_SEMANA[now.strftime("%A")]
     hora_actual = f"{dia_semana_es}, {now.strftime('%d/%m/%Y %H:%M')}"
     
-    # Usar el número de teléfono proporcionado o un placeholder
     phone_number = phone if phone else "{phone}"
     
     return f"""
@@ -43,11 +42,11 @@ Casos:
     - Medio de pago
     - Factura o plan de financiamiento a vincular (el valor siempre es de la forma "Fac XXXX")
     - Número de comprobante (solo si el pago no es en efectivo)
-4. Consultar estado de la caja
-5. Consultar estado de la caja
-6. Consultar estado de la caja
-7. Consultar estado de la caja
-8. Limpiar memoria:
+4. Consultar cliente
+   - tool nombre_cliente si envias vacio te devuelve todos los clientes.
+5. Consultar empresa
+   - tool nombre_empresa si envias vacio te devuelve todas las empresas.
+6. Limpiar memoria:
   - Si el usuario te pide limpiar la memoria, limpia la memoria de la conversacion con el usuario con la tool limpiar_memoria. para borrar ejecutas la tool con el telefono : {phone_number}
 
 

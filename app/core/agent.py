@@ -1,4 +1,6 @@
-from langchain.agents import Tool, initialize_agent, AgentType
+from langchain.agents import AgentExecutor, create_openai_functions_agent
+from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
+
 from langchain_openai import ChatOpenAI
 from langchain.memory import ConversationBufferMemory
 from langchain_community.chat_message_histories.file import FileChatMessageHistory
@@ -7,10 +9,9 @@ from app.db.mongo import MongoChatMessageHistory
 from langchain.prompts import MessagesPlaceholder
 from app.core.prompts import build_system_prompt
 from app.core.tools import (
-    buscar_nombre_cliente,
-    buscar_cliente_por_cedula,
-    buscar_ordenes_por_cliente,
-    limpiar_memoria
+    nombre_cliente,
+    limpiar_memoria,
+    nombre_empresa
 )
 import os
 import json
@@ -27,10 +28,7 @@ llm = ChatOpenAI(
 )
 
 tools = [
-    Tool.from_function(buscar_nombre_cliente, name="buscar_nombre_cliente", description="Busca clientes por nombre (full_name) en Supabase y muestra nombre, email y teléfono. Si hay varios resultados, pide al usuario que elija uno."),
-    Tool.from_function(buscar_cliente_por_cedula, name="buscar_cliente_por_cedula", description="Busca un cliente en la tabla clients por su cédula (unique_id) y devuelve nombre, email y teléfono."),
-    Tool.from_function(buscar_ordenes_por_cliente, name="buscar_ordenes_por_cliente", description="Busca todas las órdenes de compra en la tabla sales_orders asociadas a un id_client y devuelve una lista de las órdenes encontradas."),
-    Tool.from_function(limpiar_memoria, name="limpiar_memoria", description="Limpia toda la memoria de conversación de un usuario específico usando su número de teléfono. Esta herramienta borra todos los mensajes almacenados en MongoDB para el número de teléfono proporcionado."),
+   limpiar_memoria
 ]
 
 
@@ -43,19 +41,26 @@ def get_agent(phone: str):
         return_messages=True,
         chat_memory=mongo_history
     )
-
-    agent_kwargs = {
-        "extra_prompt_messages": [
-            SystemMessage(content=build_system_prompt(phone=phone)),
-            MessagesPlaceholder(variable_name="chat_history")
-        ]
-    }
-
-    return initialize_agent(
-        tools=tools,
+    prompt = ChatPromptTemplate.from_messages([
+            SystemMessage(content=build_system_prompt(phone)),
+            MessagesPlaceholder(variable_name="chat_history"),
+            ("user", "{input}"),
+            MessagesPlaceholder(variable_name="agent_scratchpad"),
+        ])
+    agent = create_openai_functions_agent(
         llm=llm,
-        agent=AgentType.OPENAI_FUNCTIONS,
-        verbose=True,
+        tools=tools,
+        prompt=prompt,
+    )
+
+    executor = AgentExecutor(
+        agent=agent,
+        tools=tools,
         memory=memory,
-        agent_kwargs=agent_kwargs
+        verbose=True,
+        max_iterations=4,          
+        max_execution_time=30,     
+        early_stopping_method="generate",
+        return_intermediate_steps=True,  
+        handle_parsing_errors=True       
     )
