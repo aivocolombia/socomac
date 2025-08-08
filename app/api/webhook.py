@@ -139,7 +139,8 @@ class ResponseSender:
         
         # Procesar con el agente de IA
         agent = get_agent(phone)
-        agent_response = agent.run(response)
+        agent_result = agent.invoke({"input": response})
+        agent_response = agent_result.get("output", "")
         
         if not agent_response:
             agent_response = "No pude procesar tu mensaje. Por favor, intenta de nuevo más tarde."
