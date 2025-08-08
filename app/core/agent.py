@@ -28,7 +28,9 @@ llm = ChatOpenAI(
 )
 
 tools = [
-   limpiar_memoria
+   limpiar_memoria,
+   nombre_empresa,
+   nombre_cliente
 ]
 
 
