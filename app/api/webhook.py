@@ -171,7 +171,7 @@ class WebhookHandler:
     def __init__(self):
         self.message_processor = MessageProcessor()
         self.response_sender = ResponseSender()
-        self.authorized_phone = "573195792747"
+        self.authorized_phone = ["573195792747", "573172288329"]
     
     def validate_message(self, body: Dict[str, Any]) -> tuple:
         """Valida y extrae datos del mensaje"""
@@ -179,8 +179,7 @@ class WebhookHandler:
             message_data = body.get("messages", [])[0]
             phone = message_data.get("from", "")
             
-            # Verificar si es el número autorizado
-            if phone != self.authorized_phone:
+            if phone not in self.authorized_phone:
                 return None, None, None, None
             
             channel_id = body.get("channel_id", "")
