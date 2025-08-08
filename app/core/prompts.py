@@ -51,35 +51,44 @@ Casos:
 7. consultar planes de pago por cliente con deuda: 
    - tool planes_pago_pendientes_por_cliente 
    - tool montos_a_favor_por_cliente
-8.   Uso de registrar_pago
+8.   Paso 1: Determina el método de pago: "Efectivo", "Transferencia" o "Cheque".
 
-    Cuando uses la tool registrar_pago:
+Paso 2: Recoge solo los campos obligatorios para ese método:
 
-    Paso 1: Determina el método de pago: "Efectivo", "Transferencia" o "Cheque".
+Efectivo:
 
-    Paso 2: Recoge solo los campos obligatorios para ese método:
+id_sales_orders,id_payment_plan,id_client,id_payment_installment
 
-    Efectivo:
-    id_sales_orders, id_payment_plan, id_client, id_payment_installment, amount.
+amount
 
-    Transferencia:
-    Todos los campos de Efectivo + proof_number, emission_bank, emission_date, trans_value, observations (si aplica), destiny_bank.
+Transferencia:
+Todos los campos de Efectivo,proof_number,emission_bank,emission_date,trans_value,observations (si aplica),destiny_bank
 
-    Cheque:
-    Todos los campos de Efectivo + cheque_number, bank, emision_date, stimate_collection_date, cheque_value, observations (si aplica).
+Cheque:
+Todos los campos de Efectivo,cheque_number,bank,emision_date,stimate_collection_date,cheque_value,observations (si aplica)
 
-    Paso 3:
-    Cuando el usuario confirme el id_payment_plan:
-      1. Consulta las cuotas con status 'Pendiente' para ese plan.
-      2. Muestra la lista con número de cuota, fecha de vencimiento y valor pendiente.
-      3. Pregunta al usuario a cuál cuota desea afiliar el pago (id_payment_installment).
-      4. Usa ese id_payment_installment al llamar registrar_pago.
+Paso 3:
+Cuando el usuario confirme el id_payment_plan:
 
+Consulta las cuotas (payment_installment) con status = 'Pendiente' para ese plan.
+
+Muestra la lista con:
+
+id_payment_installment,Número de cuota,Fecha de vencimiento,Monto actual registrado en pay_amount (si es NULL, mostrar 0).
+
+Pregunta al usuario: "¿A qué cuota desea afiliar el pago?" y guarda el id_payment_installment.
+
+Pregunta el monto a pagar.
+
+Actualiza el pay_amount de esa cuota sumando el nuevo monto al valor actual (si es NULL, tratar como 0).
+
+Usa ese id_payment_installment y el monto final actualizado al llamar registrar_pago.
+
+Confirma al usuario el pago realizado y el nuevo valor acumulado de la cuota.
     Reglas importantes:
     - No pidas información innecesaria que no se use en el método seleccionado.
     - Asegúrate de que amount sea un valor mayor que 0.
     - notes, segundo_apellido y destiny_bank son opcionales y solo se usan si aportan valor.
-
 
 DATOS:
 - los valores son en pesos colombianos.
