@@ -11,7 +11,9 @@ from app.core.prompts import build_system_prompt
 from app.core.tools import (
     nombre_cliente,
     limpiar_memoria,
-    nombre_empresa
+    nombre_empresa,
+    planes_pago_pendientes_por_cliente,
+    montos_a_favor_por_cliente
 )
 import os
 import json
@@ -30,7 +32,9 @@ llm = ChatOpenAI(
 tools = [
    limpiar_memoria,
    nombre_empresa,
-   nombre_cliente
+   nombre_cliente,
+   planes_pago_pendientes_por_cliente,
+   montos_a_favor_por_cliente
 ]
 
 

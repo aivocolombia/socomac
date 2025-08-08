@@ -48,7 +48,9 @@ Casos:
    - tool nombre_empresa si envias vacio te devuelve todas las empresas.
 6. Limpiar memoria:
   - Si el usuario te pide limpiar la memoria, limpia la memoria de la conversacion con el usuario con la tool limpiar_memoria. para borrar ejecutas la tool con el telefono : {phone_number}
-
+7. consultar planes de pago por cliente con deuda: 
+   - tool planes_pago_pendientes_por_cliente 
+   - tool montos_a_favor_por_cliente
 
 DATOS:
 - los valores son en pesos colombianos.
