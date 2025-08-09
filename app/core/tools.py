@@ -314,6 +314,8 @@ def cuotas_pendientes_por_plan(id_payment_plan: int) -> str:
         print(f"❌ {error_msg}")
         return f"Error al consultar la base de datos: {str(e)}"
 
+from decimal import Decimal
+
 @tool
 def registrar_pago(
     id_sales_orders: int,
@@ -321,17 +323,14 @@ def registrar_pago(
     id_client: int,
     payment_method: str,
     amount: float,
-    # Campos opcionales comunes
     notes: str = "",
     segundo_apellido: str = "",
     destiny_bank: str = "",
-    # Campos exclusivos para Transferencia
     proof_number: str = "",
     emission_bank: str = "",
     emission_date: str = "",
     trans_value: float = 0.0,
     observations: str = "",
-    # Campos exclusivos para Cheque
     cheque_number: str = "",
     bank: str = "",
     emision_date: str = "",
@@ -363,8 +362,10 @@ def registrar_pago(
             conn.close()
             return f"No se encontró la cuota con id_payment_installment = {id_payment_installment}"
 
-        pay_amount_actual = row[0] or 0.0
-        nuevo_acumulado = pay_amount_actual + amount
+        # Conversión segura a Decimal
+        pay_amount_actual = Decimal(row[0] or 0)
+        amount_decimal = Decimal(str(amount))
+        nuevo_acumulado = pay_amount_actual + amount_decimal
 
         caja_receipt = "Yes" if pm == "Efectivo" else "No"
 
@@ -386,7 +387,7 @@ def registrar_pago(
             RETURNING id_payment;
         """, (
             id_sales_orders, id_payment_installment, id_client, pm,
-            amount, notes, caja_receipt, segundo_apellido, destiny_bank
+            amount_decimal, notes, caja_receipt, segundo_apellido, destiny_bank
         ))
         id_payment = cursor.fetchone()[0]
 
@@ -403,7 +404,7 @@ def registrar_pago(
                   destiny_bank
                 )
                 VALUES (%s, %s, %s, %s, %s, %s, %s);
-            """, (id_payment, proof_number, emission_bank, emission_date, trans_value, observations, destiny_bank))
+            """, (id_payment, proof_number, emission_bank, emission_date, Decimal(str(trans_value)), observations, destiny_bank))
 
         elif pm == "Cheque":
             cursor.execute("""
@@ -417,7 +418,7 @@ def registrar_pago(
                   observations
                 )
                 VALUES (%s, %s, %s, %s, %s, %s, %s);
-            """, (id_payment, cheque_number, bank, emision_date, stimate_collection_date, cheque_value, observations))
+            """, (id_payment, cheque_number, bank, emision_date, stimate_collection_date, Decimal(str(cheque_value)), observations))
 
         # 4) Actualizar acumulado de la cuota
         cursor.execute("""
