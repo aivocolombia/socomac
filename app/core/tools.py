@@ -314,81 +314,123 @@ def cuotas_pendientes_por_plan(id_payment_plan: int) -> str:
         print(f"❌ {error_msg}")
         return f"Error al consultar la base de datos: {str(e)}"
 
-import psycopg2
-
-def registrar_pago():
-    conn = psycopg2.connect(
-        host="localhost",
-        database="tu_base",
-        user="tu_usuario",
-        password="tu_password"
-    )
-    cursor = conn.cursor()
-
-    # Paso 1: Confirmar id_payment_plan
-    id_payment_plan = input("Ingrese el ID del plan de pago: ")
-
-    # Paso 2: Mostrar cuotas asociadas
-    cursor.execute("""
-        SELECT id_payment_installment, installment_number, pay_amount
-        FROM payment_installment
-        WHERE id_payment_plan = %s
-        ORDER BY installment_number;
-    """, (id_payment_plan,))
-    cuotas = cursor.fetchall()
-
-    if not cuotas:
-        print("No se encontraron cuotas para este plan.")
-        conn.close()
-        return
-
-    print("\nCuotas del plan:")
-    for cuota in cuotas:
-        id_pi, num, monto = cuota
-        print(f"ID: {id_pi} | Cuota N° {num} | Monto actual: {monto or 0}")
-
-    # Paso 3: Usuario elige cuota
-    id_payment_installment = input("\nIngrese el ID de la cuota a la que desea afiliar el pago: ")
-
-    # Paso 4: Monto del pago
+@tool
+def registrar_pago(
+    id_sales_orders: int,
+    id_payment_installment: int,
+    id_client: int,
+    payment_method: str,
+    amount: float,
+    # Campos opcionales comunes
+    notes: str = "",
+    segundo_apellido: str = "",
+    destiny_bank: str = "",
+    # Campos exclusivos para Transferencia
+    proof_number: str = "",
+    emission_bank: str = "",
+    emission_date: str = "",
+    trans_value: float = 0.0,
+    observations: str = "",
+    # Campos exclusivos para Cheque
+    cheque_number: str = "",
+    bank: str = "",
+    emision_date: str = "",
+    stimate_collection_date: str = "",
+    cheque_value: float = 0.0
+) -> str:
+    """
+    Registra un pago para una cuota específica (payment_installment) y actualiza su valor acumulado.
+    """
     try:
-        amount = float(input("Ingrese el monto a pagar: "))
-    except ValueError:
-        print("Monto inválido.")
+        if amount <= 0:
+            return "El monto del pago debe ser mayor que 0."
+
+        pm = payment_method.strip().capitalize()
+        if pm not in ["Efectivo", "Transferencia", "Cheque"]:
+            return "Método de pago inválido. Use: Efectivo, Transferencia o Cheque."
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # 1) Consultar monto actual de la cuota
+        cursor.execute("""
+            SELECT pay_amount
+            FROM payment_installment
+            WHERE id_payment_installment = %s;
+        """, (id_payment_installment,))
+        row = cursor.fetchone()
+        if not row:
+            conn.close()
+            return f"No se encontró la cuota con id_payment_installment = {id_payment_installment}"
+
+        pay_amount_actual = row[0] or 0.0
+        nuevo_acumulado = pay_amount_actual + amount
+
+        caja_receipt = "Yes" if pm == "Efectivo" else "No"
+
+        # 2) Insert en payments
+        cursor.execute("""
+            INSERT INTO payments (
+              id_sales_orders,
+              id_payment_installment,
+              id_client,
+              payment_method,
+              amount,
+              payment_date,
+              notes,
+              caja_receipt,
+              segundo_apellido,
+              destiny_bank
+            )
+            VALUES (%s, %s, %s, %s, %s, CURRENT_DATE, %s, %s, %s, %s)
+            RETURNING id_payment;
+        """, (
+            id_sales_orders, id_payment_installment, id_client, pm,
+            amount, notes, caja_receipt, segundo_apellido, destiny_bank
+        ))
+        id_payment = cursor.fetchone()[0]
+
+        # 3) Inserts adicionales según método
+        if pm == "Transferencia":
+            cursor.execute("""
+                INSERT INTO transfers (
+                  id_payment,
+                  proof_number,
+                  emission_bank,
+                  emission_date,
+                  trans_value,
+                  observations,
+                  destiny_bank
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s);
+            """, (id_payment, proof_number, emission_bank, emission_date, trans_value, observations, destiny_bank))
+
+        elif pm == "Cheque":
+            cursor.execute("""
+                INSERT INTO cheques (
+                  id_payment,
+                  cheque_number,
+                  bank,
+                  emision_date,
+                  stimate_collection_date,
+                  cheque_value,
+                  observations
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s);
+            """, (id_payment, cheque_number, bank, emision_date, stimate_collection_date, cheque_value, observations))
+
+        # 4) Actualizar acumulado de la cuota
+        cursor.execute("""
+            UPDATE payment_installment
+            SET pay_amount = %s,
+                payment_date = CURRENT_DATE
+            WHERE id_payment_installment = %s;
+        """, (nuevo_acumulado, id_payment_installment))
+
+        conn.commit()
         conn.close()
-        return
 
-    # Paso 5: Obtener monto actual y sumarlo
-    cursor.execute("""
-        SELECT pay_amount
-        FROM payment_installment
-        WHERE id_payment_installment = %s;
-    """, (id_payment_installment,))
-    row = cursor.fetchone()
-    if not row:
-        print("No se encontró la cuota seleccionada.")
-        conn.close()
-        return
+        return f"✅ Pago registrado correctamente. ID Payment: {id_payment} | Nuevo acumulado en la cuota: {nuevo_acumulado}"
 
-    pay_amount_actual = float(row[0] or 0)
-    nuevo_acumulado = pay_amount_actual + amount
-
-    # Paso 6: Actualizar monto acumulado en la cuota
-    cursor.execute("""
-        UPDATE payment_installment
-        SET pay_amount = %s
-        WHERE id_payment_installment = %s;
-    """, (nuevo_acumulado, id_payment_installment))
-
-    # Paso 7: Registrar el pago
-    cursor.execute("""
-        INSERT INTO payments (id_payment_installment, amount)
-        VALUES (%s, %s);
-    """, (id_payment_installment, amount))
-
-    conn.commit()
-    conn.close()
-    print(f"\nPago registrado correctamente. Nuevo monto acumulado en la cuota: {nuevo_acumulado}")
-
-
-
+    except Exception as e:
+        return f"❌ Error al registrar el pago: {str(e)}"
