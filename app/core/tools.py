@@ -280,7 +280,7 @@ def cuotas_pendientes_por_plan(id_payment_plan: int) -> str:
                     TO_CHAR(pi.due_date, 'DD/MM/YYYY') AS fecha_vencimiento,
                     pi.status AS estado
                 FROM public.payment_installment AS pi
-                WHERE pi.id_payment_plan = {{id_payment_plan}}
+                WHERE pi.id_payment_plan = %s
                 AND pi.status = 'Pendiente'
                 ORDER BY pi.installment_number ASC;
         """
