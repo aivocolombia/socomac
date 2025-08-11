@@ -317,8 +317,6 @@ from decimal import Decimal
 @tool
 def registrar_pago(
     id_sales_orders: int,
-    id_payment_plan: int,
-    id_client: int,
     id_payment_installment: int,
     amount: float,
     metodo_pago: str,
@@ -340,6 +338,22 @@ def registrar_pago(
     - Transferencia → payments + transfers (trans_value = amount, destino validado)
     - Cheque → payments + cheques (amount = cheque_value)
     Actualiza el acumulado pagado en la cuota.
+    
+    Args:
+        id_sales_orders (int): ID de la orden de venta
+        id_payment_installment (int): ID de la cuota de pago
+        amount (float): Monto del pago
+        metodo_pago (str): Método de pago (efectivo, transferencia, cheque)
+        proof_number (str, optional): Número de comprobante para transferencias
+        emission_bank (str, optional): Banco de emisión para transferencias
+        emission_date (str, optional): Fecha de emisión para transferencias
+        destiny_bank (str, optional): Banco de destino para transferencias
+        observations (str, optional): Observaciones adicionales
+        cheque_number (str, optional): Número de cheque
+        bank (str, optional): Banco del cheque
+        emision_date (str, optional): Fecha de emisión del cheque
+        stimate_collection_date (str, optional): Fecha estimada de cobro del cheque
+        cheque_value (float, optional): Valor del cheque
     """
     try:
         conn = get_db_connection()
@@ -349,6 +363,7 @@ def registrar_pago(
 
         # === Normalizar y validar destino en transferencias ===
         if metodo_pago == "transferencia":
+            # Solo validar banco de destino (destiny_bank)
             bancos_validos = {
                 "bancolombia": "Bancolombia",
                 "davivienda": "Davivienda"
@@ -357,8 +372,9 @@ def registrar_pago(
                 return "❌ Debes indicar el banco destino."
             destiny_bank_normalizado = destiny_bank.strip().lower()
             if destiny_bank_normalizado not in bancos_validos:
-                return "❌ Banco inválido. Solo se permite 'Bancolombia' o 'Davivienda'."
+                return "❌ Banco destino inválido. Solo se permite 'Bancolombia' o 'Davivienda'."
             destiny_bank = bancos_validos[destiny_bank_normalizado]
+            # El banco de emisión (emission_bank) puede ser cualquier banco, no se valida
             trans_value = amount  # Copiar automáticamente
 
         # === Ajustar amount en caso de cheque ===
@@ -369,11 +385,11 @@ def registrar_pago(
 
         # === Insertar en payments ===
         cursor.execute("""
-            INSERT INTO payments (id_sales_orders, id_payment_plan, id_client, id_payment_installment, amount, payment_method)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            INSERT INTO payments (id_sales_orders, id_payment_installment, amount, payment_method, payment_date, destiny_bank)
+            VALUES (%s, %s, %s, %s, CURRENT_DATE, %s)
             RETURNING id_payment;
         """, (
-            id_sales_orders, id_payment_plan, id_client, id_payment_installment, amount, metodo_pago.capitalize()
+            id_sales_orders, id_payment_installment, amount, metodo_pago.capitalize(), destiny_bank
         ))
         id_payment = cursor.fetchone()[0]
 
