@@ -305,8 +305,6 @@ def cuotas_pendientes_por_plan(id_payment_plan: int) -> str:
 
 from decimal import Decimal
 
-from decimal import Decimal
-
 @tool
 def registrar_pago(
     id_sales_orders: int,
@@ -332,11 +330,18 @@ def registrar_pago(
     cheque_value: float = 0.0
 ) -> str:
     """
-    Registra un pago en el sistema según el método indicado.
-    - Efectivo: payments
-    - Transferencia: payments + transfers
-    - Cheque: payments + cheques
-    También actualiza el pay_amount en payment_installment.
+    Registra un pago en el sistema según el método de pago indicado.
+
+    Métodos admitidos:
+    - Efectivo → Inserta en `payments` y actualiza `pay_amount` en la cuota.
+    - Transferencia → Inserta en `payments` y en `transfers`. 
+      El valor de `trans_value` se iguala automáticamente a `amount`.
+      Solo se permite 'Bancolombia' o 'Davivienda' como destino.
+    - Cheque → Inserta en `payments` y en `cheques`.
+
+    Además:
+    - Actualiza el monto acumulado pagado (`pay_amount`) en `payment_installment`.
+    - Valida y normaliza el banco de destino en transferencias.
     """
     try:
         method = payment_method.strip().lower()
@@ -420,3 +425,4 @@ def registrar_pago(
 
     except Exception as e:
         return f"❌ Error al registrar pago: {str(e)}"
+
