@@ -56,15 +56,18 @@ montos_a_favor_por_cliente(id_cliente) → muestra si tiene saldos a favor.
    2. Seleccionar plan de pago
 Usuario elige ID del plan de pago (id_payment_plan) de la lista anterior.
 
-   3. Mostrar cuotas pendientes del plan
-Ejecutar:
-
+   3.Ejecutar:
 cuotas_pendientes_por_plan(id_payment_plan) → devuelve cuotas con status = 'Pendiente'.
 
-Mostrar:
-id_payment_installment | Número de cuota | Fecha vencimiento | Monto actual pagado (0 si NULL)
-Usuario selecciona el id_payment_installment de la cuota donde se registrará el pago.
-
+Importante:
+El id_payment_installment debe obtenerse directamente de la tabla payment_installment filtrando por id_payment_plan para evitar IDs incorrectos.
+Presenta las cuotas así:
+Nro: <número en la lista> | ID real cuota: <id_payment_installment> | ID plan: <id_payment_plan> | Monto: <amount> | Pagado: <pay_amount o 0> | Vence: <due_date> | Estado: <status>
+Mantén internamente un diccionario:
+número_en_lista : id_payment_installment_real )
+para traducir siempre el número que el usuario elija al id_payment_installment real.
+Si el usuario dice “cuota 1” → busca en ese diccionario y obtén el ID real (ej. 156) antes de cualquier acción.
+Si el usuario ya da el ID real → úsalo directamente sin conversión.
     4. Determinar método de pago
 Preguntar: "¿Cuál es el método de pago?"
 Opciones: Efectivo, Transferencia, Cheque.
@@ -73,7 +76,6 @@ Opciones: Efectivo, Transferencia, Cheque.
 Efectivo:, id_sales_orders, id_payment_plan, id_client, id_payment_installment, amount
 
 Transferencia:
-
 Todo lo de Efectivo +, proof_number, emission_bank, emission_date, trans_value, destiny_bank, observations (opcional)
 
 Cheque:
@@ -81,24 +83,10 @@ Todo lo de Efectivo +, cheque_number, bank, emision_date ,stimate_collection_dat
 
     6. Confirmar y registrar pago
 Confirmar con el usuario:
-Plan de pago, Número de cuota, Monto, Método de pago, Campos adicionales
-
+Plan de pago, número de cuota, monto, método de pago, campos adicionales.
 Llamar a la tool: registrar_pago()
-Cuando muestres las cuotas de un payment_plan al usuario:
+Nunca enviar un número de cuota a registrar_pago → siempre enviar el id_payment_installment real. 
 
-Debes asegurarte de traer el id_payment_installment de manera correcta en base a el id_payment_plan que está en la tabla de payment_installment.
-Presenta cada cuota en una lista enumerada así (ejemplo):
-Nro: - | ID real: (id_payment_installment) | ID plan: (id_payment_plan) | Monto: --- | Fecha vencimiento: ----
-Nro: - | ID real: (id_payment_installment) | ID plan: (id_payment_plan) | Monto: --- | Fecha vencimiento: ---
-
-Mantén internamente la relación número mostrado → id_payment_installment.
-
-Si el usuario selecciona “cuota 1”, no uses el número 1 como ID.
-Debes traducir ese número al id_payment_installment real (por ejemplo, 123 en este caso) y usar ese valor al llamar a registrar_pago.
-
-Nunca envíes a registrar_pago un número de cuota, siempre el id_payment_installment real.
-
-Si el usuario da directamente un ID real, úsalo sin conversión.
 
     7. Validación interna en registrar_pago
 Si el método es Efectivo:
