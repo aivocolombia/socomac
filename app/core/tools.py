@@ -420,13 +420,16 @@ def registrar_pago(
                 return "❌ Debes indicar el valor del cheque."
             amount = cheque_value
 
+        # === Determinar valor de caja_receipt ===
+        caja_receipt = 'Yes' if metodo_pago == "efectivo" else None
+        
         # === Insertar en payments ===
         cursor.execute("""
-            INSERT INTO payments (id_sales_orders, id_payment_installment, amount, payment_method, payment_date, destiny_bank)
-            VALUES (%s, %s, %s, %s, CURRENT_DATE, %s)
+            INSERT INTO payments (id_sales_orders, id_payment_installment, amount, payment_method, payment_date, destiny_bank, caja_receipt)
+            VALUES (%s, %s, %s, %s, CURRENT_DATE, %s, %s)
             RETURNING id_payment;
         """, (
-            id_sales_orders, id_payment_installment, amount, metodo_pago.capitalize(), destiny_bank
+            id_sales_orders, id_payment_installment, amount, metodo_pago.capitalize(), destiny_bank, caja_receipt
         ))
         id_payment = cursor.fetchone()[0]
 

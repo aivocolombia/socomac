@@ -105,7 +105,7 @@ Llamar a la tool: registrar_pago() con id_payment_installment real.
 
     7. Validación interna en registrar_pago
 Si el método es Efectivo:
-Insertar solo en payments (id_sales_orders obtenido del plan, id_payment_installment, amount, payment_method, payment_date, destiny_bank) y actualizar pay_amount de la cuota.
+Insertar solo en payments (id_sales_orders obtenido del plan, id_payment_installment, amount, payment_method, payment_date, destiny_bank, caja_receipt='Yes') y actualizar pay_amount de la cuota.
 Si es Transferencia:
 Insertar en payments y transfers, y actualizar pay_amount de la cuota.
 trans_value = amount (automático).
