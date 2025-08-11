@@ -271,18 +271,19 @@ def cuotas_pendientes_por_plan(id_payment_plan: int) -> str:
         cursor = conn.cursor()
 
         query = """
-                SELECT 
-                    pi.installment_number AS nro_mostrado,
-                    pi.id_payment_installment AS id_real_payment_installment,
-                    pi.id_payment_plan,
-                    pi.amount AS monto_total,
-                    COALESCE(pi.pay_amount, 0) AS monto_pagado,
-                    TO_CHAR(pi.due_date, 'DD/MM/YYYY') AS fecha_vencimiento,
-                    pi.status AS estado
-                FROM public.payment_installment AS pi
-                WHERE pi.id_payment_plan = %s
-                AND pi.status = 'Pendiente'
-                ORDER BY pi.installment_number ASC;
+                 SELECT 
+                pi.id_payment_installment,
+                pi.installment_number,
+                pi.due_date,
+                pi.amount,
+                pi.pay_amount,
+                pi.status,
+                pi.daysoverdue,
+                pi.early_payment_discount
+            FROM public.payment_installment pi
+            WHERE pi.id_payment_plan = %s
+              AND pi.status = 'Pendiente'
+            ORDER BY pi.installment_number ASC;
         """
 
         cursor.execute(query, (id_payment_plan,))
