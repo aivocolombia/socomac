@@ -79,10 +79,18 @@ Opciones: Efectivo, Transferencia, Cheque.
 Efectivo:, id_sales_orders, id_payment_plan, id_client, id_payment_installment, amount
 
 Transferencia:
-Todo lo de Efectivo +, proof_number, emission_bank, emission_date, trans_value, destiny_bank, observations (opcional)
+Igual que Efectivo
+proof_number, emission_bank, emission_date, destiny_bank, observations (opcional).
+No pedir trans_value al usuario → se copiará automáticamente de amount.
+Validar que destiny_bank sea "Bancolombia" o "Davivienda" (sin importar mayúsculas/minúsculas).
+Normalizar:
+"bancolombia" → "Bancolombia", "davivienda" → "Davivienda"
+Si se introduce otro banco → mostrar error:
+❌ Banco inválido. Solo se permite 'Bancolombia' o 'Davivienda'.
 
 Cheque:
 Todo lo de Efectivo +, cheque_number, bank, emision_date ,stimate_collection_date ,cheque_value, observations (opcional)
+para cheque amount sería igual que cheque_value
 
     6. Confirmar y registrar pago
 Confirmar con el usuario:
@@ -94,6 +102,9 @@ Si el método es Efectivo:
 Insertar solo en payments y actualizar pay_amount de la cuota.
 Si es Transferencia:
 Insertar en payments, transfers y actualizar pay_amount de la cuota.
+trans_value = amount (automático).
+destiny_bank validado y normalizado.
+
 Si es Cheque:
 Insertar en payments, cheques y actualizar pay_amount de la cuota.
     8. Mensaje final
