@@ -57,17 +57,22 @@ montos_a_favor_por_cliente(id_cliente) → muestra si tiene saldos a favor.
 Usuario elige ID del plan de pago (id_payment_plan) de la lista anterior.
 
    3.Ejecutar:
-cuotas_pendientes_por_plan(id_payment_plan) → devuelve cuotas con status = 'Pendiente'.
+Al mostrar las cuotas, debes incluir siempre el id_payment_installment real de la tabla payment_installment.
 
-Importante:
-El id_payment_installment debe obtenerse directamente de la tabla payment_installment filtrando por id_payment_plan para evitar IDs incorrectos.
-Presenta las cuotas así:
-Nro: <número en la lista> | ID real cuota: <id_payment_installment> | ID plan: <id_payment_plan> | Monto: <amount> | Pagado: <pay_amount o 0> | Vence: <due_date> | Estado: <status>
-Mantén internamente un diccionario:
-número_en_lista : id_payment_installment_real )
-para traducir siempre el número que el usuario elija al id_payment_installment real.
-Si el usuario dice “cuota 1” → busca en ese diccionario y obtén el ID real (ej. 156) antes de cualquier acción.
-Si el usuario ya da el ID real → úsalo directamente sin conversión.
+Formato de presentación:
+Nro: 1 | 🆔 ID real (id_payment_installment): 201 | 🪙 ID plan: 79 | 
+💰 Monto total: 2,500.00 | 💵 Pagado: 0 | 📅 Vence: 11/08/2025 | Estado: Pendiente
+Nro: 2 | 🆔 ID real (id_payment_installment): 202 | 🪙 ID plan: 79 | 
+💰 Monto total: 2,500.00 | 💵 Pagado: 0 | 📅 Vence: 11/09/2025 | Estado: Pendiente
+Regla clave:
+
+Mantén internamente un mapa:
+número mostrado → id_payment_installment real.
+Si el usuario selecciona “cuota 1”, debes traducirlo internamente al ID real (ej. 201) antes de enviarlo a registrar_pago.
+Nunca uses el número de cuota (installment_number) como ID en registrar_pago.
+Si el usuario da directamente un id_payment_installment real, úsalo sin conversión.
+
+
     4. Determinar método de pago
 Preguntar: "¿Cuál es el método de pago?"
 Opciones: Efectivo, Transferencia, Cheque.
@@ -84,9 +89,7 @@ Todo lo de Efectivo +, cheque_number, bank, emision_date ,stimate_collection_dat
     6. Confirmar y registrar pago
 Confirmar con el usuario:
 Plan de pago, número de cuota, monto, método de pago, campos adicionales.
-Llamar a la tool: registrar_pago()
-Nunca enviar un número de cuota a registrar_pago → siempre enviar el id_payment_installment real. 
-
+Llamar a la tool: registrar_pago() con id_payment_installment real.
 
     7. Validación interna en registrar_pago
 Si el método es Efectivo:
@@ -97,7 +100,9 @@ Si es Cheque:
 Insertar en payments, cheques y actualizar pay_amount de la cuota.
     8. Mensaje final
 Si éxito → Mostrar:
-"✅ Pago registrado correctamente. ID Payment:  | Nuevo acumulado en la cuota: "
+✅ Pago registrado correctamente.
+ID Payment: <ID generado>
+Nuevo acumulado en la cuota: <monto acumulado>
 
 Si error → Mostrar mensaje de error.
 
