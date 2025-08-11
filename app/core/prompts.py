@@ -78,8 +78,9 @@ IMPORTANTE: Si se extrajo información de una imagen que indica el método de pa
 Si no se ha especificado, preguntar: "¿Cuál es el método de pago?"
 Opciones: Efectivo, Transferencia, Cheque.
 
-    5. Solicitar campos requeridos según método
+         5. Solicitar campos requeridos según método
 IMPORTANTE: Si se envió una imagen y se extrajo un monto de ella, usa ese monto automáticamente como "amount" sin preguntar al usuario.
+IMPORTANTE: El monto puede ser un abono parcial, no necesariamente el monto completo de la cuota.
 
 Efectivo:, id_payment_installment, amount
 (El id_sales_orders se obtiene automáticamente del plan seleccionado)
@@ -99,9 +100,10 @@ Cheque:
 Todo lo de Efectivo +, cheque_number, bank, emision_date ,stimate_collection_date ,cheque_value, observations (opcional)
 para cheque amount sería igual que cheque_value
 
-    6. Confirmar y registrar pago
+         6. Confirmar y registrar pago
 Confirmar con el usuario:
 Plan de pago, número de cuota, monto, método de pago, campos adicionales.
+IMPORTANTE: Si el método de pago ya fue identificado desde una imagen o especificado anteriormente, NO lo preguntes nuevamente, úsalo directamente.
 Llamar a la tool: registrar_pago() con id_payment_installment real.
 
     7. Validación interna en registrar_pago
@@ -132,6 +134,8 @@ Confirma al usuario el pago realizado y el nuevo valor acumulado de la cuota.
     - Si se extrajo información de una imagen que indica el método de pago, úsalo automáticamente.
     - Si se extrajo un monto de una imagen, úsalo automáticamente como amount sin preguntar.
     - NUNCA pidas el id_sales_orders al usuario, siempre obténlo automáticamente del plan seleccionado usando obtener_id_sales_orders_por_plan().
+    - El monto puede ser un abono parcial, no necesariamente el monto completo de la cuota.
+    - NUNCA preguntes el método de pago si ya fue identificado desde una imagen o especificado anteriormente.
 
 DATOS:
 - los valores son en pesos colombianos.
