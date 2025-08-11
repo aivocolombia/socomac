@@ -339,14 +339,36 @@ def registrar_pago(
 ) -> str:
     """
     Registra un pago para una cuota específica (payment_installment) y actualiza su valor acumulado.
+    Valida campos obligatorios según método de pago.
     """
     try:
-        if amount <= 0:
-            return "El monto del pago debe ser mayor que 0."
+        # Validación de monto
+        if amount is None or amount <= 0:
+            return "❌ El monto del pago debe ser mayor que 0."
 
+        # Normalizar método de pago
         pm = payment_method.strip().capitalize()
         if pm not in ["Efectivo", "Transferencia", "Cheque"]:
-            return "Método de pago inválido. Use: Efectivo, Transferencia o Cheque."
+            return "❌ Método de pago inválido. Use: Efectivo, Transferencia o Cheque."
+
+        # Validación de campos obligatorios por método
+        if pm == "Efectivo":
+            required_fields = [id_sales_orders, id_payment_installment, id_client, amount]
+        elif pm == "Transferencia":
+            required_fields = [
+                id_sales_orders, id_payment_installment, id_client, amount,
+                proof_number, emission_bank, emission_date, trans_value, destiny_bank
+            ]
+        elif pm == "Cheque":
+            required_fields = [
+                id_sales_orders, id_payment_installment, id_client, amount,
+                cheque_number, bank, emision_date, stimate_collection_date, cheque_value
+            ]
+
+        # Comprobación de campos obligatorios
+        for field in required_fields:
+            if field in [None, ""] or (isinstance(field, (int, float)) and field == 0):
+                return f"❌ Falta un campo obligatorio para el método de pago {pm}."
 
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -360,10 +382,10 @@ def registrar_pago(
         row = cursor.fetchone()
         if not row:
             conn.close()
-            return f"No se encontró la cuota con id_payment_installment = {id_payment_installment}"
+            return f"❌ No se encontró la cuota con id_payment_installment = {id_payment_installment}"
 
-        # Conversión segura a Decimal
-        pay_amount_actual = Decimal(row[0] or 0)
+        # Conversión segura de monto actual
+        pay_amount_actual = Decimal(str(row[0] or 0))
         amount_decimal = Decimal(str(amount))
         nuevo_acumulado = pay_amount_actual + amount_decimal
 
@@ -404,7 +426,10 @@ def registrar_pago(
                   destiny_bank
                 )
                 VALUES (%s, %s, %s, %s, %s, %s, %s);
-            """, (id_payment, proof_number, emission_bank, emission_date, Decimal(str(trans_value)), observations, destiny_bank))
+            """, (
+                id_payment, proof_number, emission_bank, emission_date,
+                Decimal(str(trans_value)), observations, destiny_bank
+            ))
 
         elif pm == "Cheque":
             cursor.execute("""
@@ -418,7 +443,10 @@ def registrar_pago(
                   observations
                 )
                 VALUES (%s, %s, %s, %s, %s, %s, %s);
-            """, (id_payment, cheque_number, bank, emision_date, stimate_collection_date, Decimal(str(cheque_value)), observations))
+            """, (
+                id_payment, cheque_number, bank, emision_date,
+                stimate_collection_date, Decimal(str(cheque_value)), observations
+            ))
 
         # 4) Actualizar acumulado de la cuota
         cursor.execute("""
