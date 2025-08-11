@@ -253,22 +253,26 @@ def montos_a_favor_por_cliente(id_cliente: int) -> str:
 
 @tool
 def cuotas_pendientes_por_plan(id_payment_plan: int) -> str:
+    """
+    Devuelve las cuotas con estado 'Pendiente' de un plan de pago específico.
+    Guarda un mapeo global: número_cuota → {id_payment_installment, id_payment_plan}.
+    """
     try:
         if not isinstance(id_payment_plan, int) or id_payment_plan <= 0:
-            return "El ID del plan de pago debe ser un número entero positivo."
+            return "❌ El ID del plan de pago debe ser un número entero positivo."
 
         conn = get_db_connection()
         cursor = conn.cursor()
 
         query = """
             SELECT 
-                pi.installment_number,
-                pi.id_payment_installment,
-                pi.id_payment_plan,
-                pi.amount,
-                COALESCE(pi.pay_amount, 0),
-                TO_CHAR(pi.due_date, 'DD/MM/YYYY'),
-                pi.status
+                pi.installment_number,                -- Número mostrado
+                pi.id_payment_installment,            -- ID real de la cuota
+                pi.id_payment_plan,                   -- ID del plan
+                pi.amount,                            -- Monto total
+                COALESCE(pi.pay_amount, 0),           -- Monto pagado
+                TO_CHAR(pi.due_date, 'DD/MM/YYYY'),   -- Fecha de vencimiento
+                pi.status                             -- Estado
             FROM public.payment_installment AS pi
             WHERE pi.id_payment_plan = %s
               AND pi.status = 'Pendiente'
@@ -281,7 +285,7 @@ def cuotas_pendientes_por_plan(id_payment_plan: int) -> str:
         if not rows:
             return f"No se encontraron cuotas pendientes para el plan {id_payment_plan}."
 
-        # mapa global para convertir número mostrado → id real
+        # Crear un mapa global para convertir número mostrado → IDs reales
         global cuotas_map
         cuotas_map = {}
 
