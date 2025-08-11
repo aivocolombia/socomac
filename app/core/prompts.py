@@ -84,6 +84,21 @@ Confirmar con el usuario:
 Plan de pago, Número de cuota, Monto, Método de pago, Campos adicionales
 
 Llamar a la tool: registrar_pago()
+Cuando muestres las cuotas de un payment_plan al usuario:
+
+Presenta cada cuota en una lista enumerada así:
+Nro: 1 | ID real: 123 | Monto: $100 | Fecha vencimiento: 2025-09-10
+Nro: 2 | ID real: 124 | Monto: $100 | Fecha vencimiento: 2025-10-10
+
+Mantén internamente la relación número mostrado → id_payment_installment.
+
+Si el usuario selecciona “cuota 1”, no uses el número 1 como ID.
+Debes traducir ese número al id_payment_installment real (por ejemplo, 123 en este caso) y usar ese valor al llamar a registrar_pago.
+
+Nunca envíes a registrar_pago un número de cuota, siempre el id_payment_installment real.
+
+Si el usuario da directamente un ID real, úsalo sin conversión.
+
     7. Validación interna en registrar_pago
 Si el método es Efectivo:
 Insertar solo en payments y actualizar pay_amount de la cuota.
