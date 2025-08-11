@@ -305,6 +305,8 @@ def cuotas_pendientes_por_plan(id_payment_plan: int) -> str:
 
 from decimal import Decimal
 
+from decimal import Decimal
+
 @tool
 def registrar_pago(
     id_sales_orders: int,
@@ -331,11 +333,18 @@ def registrar_pago(
 ) -> str:
     """
     Registra un pago en el sistema según el método indicado.
+    - Efectivo: payments
+    - Transferencia: payments + transfers
+    - Cheque: payments + cheques
+    También actualiza el pay_amount en payment_installment.
     """
     try:
         method = payment_method.strip().lower()
 
-        # 🔹 Normalización y validaciones
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # 🔹 Validaciones y normalizaciones
         if method == "transferencia":
             # Sincronizar trans_value con amount
             trans_value = amount
@@ -344,16 +353,70 @@ def registrar_pago(
             bancos_validos = {"bancolombia": "Bancolombia", "davivienda": "Davivienda"}
             banco_normalizado = bancos_validos.get(destiny_bank.strip().lower())
             if not banco_normalizado:
+                conn.close()
                 return "❌ Banco inválido. Solo se permite 'Bancolombia' o 'Davivienda'."
             destiny_bank = banco_normalizado
 
-        # Aquí seguiría la lógica de inserción según método...
-        # Efectivo → tabla payments
-        # Transferencia → tabla payments + tabla transfers
-        # Cheque → tabla payments + tabla cheques
-        # Y la actualización de pay_amount en payment_installment
+        # Insertar en payments (común a todos los métodos)
+        cursor.execute("""
+            INSERT INTO public.payments (
+                id_sales_orders, id_payment_installment, id_client,
+                payment_date, payment_method, amount, notes,
+                destiny_bank, segundo_apellido
+            ) VALUES (
+                %s, %s, %s, CURRENT_DATE, %s, %s, %s, %s, %s
+            )
+            RETURNING id_payment;
+        """, (
+            id_sales_orders, id_payment_installment, id_client,
+            payment_method, Decimal(amount), notes, destiny_bank, segundo_apellido
+        ))
+        id_payment = cursor.fetchone()[0]
 
-        return "✅ Pago registrado correctamente."
+        # Inserciones específicas por método
+        if method == "transferencia":
+            cursor.execute("""
+                INSERT INTO public.transfers (
+                    id_payment, proof_number, emission_bank,
+                    emission_date, trans_value, observations
+                ) VALUES (
+                    %s, %s, %s, %s, %s, %s
+                );
+            """, (
+                id_payment, proof_number, emission_bank,
+                emission_date, Decimal(trans_value), observations
+            ))
+
+        elif method == "cheque":
+            cursor.execute("""
+                INSERT INTO public.cheques (
+                    id_payment, cheque_number, bank,
+                    emision_date, stimate_collection_date,
+                    cheque_value, observations
+                ) VALUES (
+                    %s, %s, %s, %s, %s, %s, %s
+                );
+            """, (
+                id_payment, cheque_number, bank,
+                emision_date, stimate_collection_date,
+                Decimal(cheque_value), observations
+            ))
+
+        # Actualizar monto pagado en la cuota
+        cursor.execute("""
+            UPDATE public.payment_installment
+            SET pay_amount = COALESCE(pay_amount, 0) + %s
+            WHERE id_payment_installment = %s;
+        """, (Decimal(amount), id_payment_installment))
+
+        conn.commit()
+        conn.close()
+
+        return (
+            f"✅ Pago registrado correctamente.\n"
+            f"ID Payment: {id_payment}\n"
+            f"Nuevo acumulado en la cuota: +{amount}"
+        )
 
     except Exception as e:
         return f"❌ Error al registrar pago: {str(e)}"
