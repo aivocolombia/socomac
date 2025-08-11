@@ -252,14 +252,7 @@ def montos_a_favor_por_cliente(id_cliente: int) -> str:
         return f"Error al consultar la base de datos: {str(e)}"
 
 
-from decimal import Decimal
-
-@tool
 def cuotas_pendientes_por_plan(id_payment_plan: int) -> str:
-    """
-    Devuelve las cuotas con estado 'Pendiente' de un plan de pago específico.
-    Corrige el orden de columnas y devuelve el id_payment_installment real primero.
-    """
     try:
         if not isinstance(id_payment_plan, int) or id_payment_plan <= 0:
             return "El ID del plan de pago debe ser un número entero positivo."
@@ -269,21 +262,18 @@ def cuotas_pendientes_por_plan(id_payment_plan: int) -> str:
 
         query = """
             SELECT 
+                pi.installment_number,
                 pi.id_payment_installment,
-                pi.installment_number AS nro_mostrado,
                 pi.id_payment_plan,
-                pi.amount AS monto_total,
-                COALESCE(pi.pay_amount, 0) AS monto_pagado,
-                TO_CHAR(pi.due_date, 'DD/MM/YYYY') AS fecha_vencimiento,
-                pi.status AS estado,
-                COALESCE(pi.daysoverdue, 0) AS dias_mora,
-                COALESCE(pi.early_payment_discount, 0) AS descuento_pronto_pago
+                pi.amount,
+                COALESCE(pi.pay_amount, 0),
+                TO_CHAR(pi.due_date, 'DD/MM/YYYY'),
+                pi.status
             FROM public.payment_installment AS pi
             WHERE pi.id_payment_plan = %s
               AND pi.status = 'Pendiente'
             ORDER BY pi.installment_number ASC;
         """
-
         cursor.execute(query, (id_payment_plan,))
         rows = cursor.fetchall()
         conn.close()
@@ -291,234 +281,174 @@ def cuotas_pendientes_por_plan(id_payment_plan: int) -> str:
         if not rows:
             return f"No se encontraron cuotas pendientes para el plan {id_payment_plan}."
 
-        # Construir mapa interno: número mostrado -> id real
-        mapa_cuotas = {}
+        # mapa global para convertir número mostrado → id real
+        global cuotas_map
+        cuotas_map = {}
+
         lines = []
-        for (
-            id_real_installment,
-            installment_number,
-            id_plan,
-            amount,
-            pay_amount,
-            fecha_vencimiento,
-            status,
-            dias_mora,
-            descuento_pronto_pago
-        ) in rows:
-            # Guardamos el mapeo para uso posterior (pagar cuota X -> id real)
-            mapa_cuotas[str(installment_number)] = id_real_installment
-
-            # Formateo de montos
-            try:
-                monto_total_fmt = f"{Decimal(amount):,.2f}"
-            except Exception:
-                monto_total_fmt = str(amount)
-            try:
-                monto_pagado_fmt = f"{Decimal(pay_amount):,.2f}"
-            except Exception:
-                monto_pagado_fmt = str(pay_amount)
-
+        for num_installment, id_real, id_plan, amount, pay_amount, due_date, status in rows:
+            cuotas_map[num_installment] = {
+                "id_payment_installment": id_real,
+                "id_payment_plan": id_plan
+            }
             lines.append(
-                f"Nro: {installment_number} | 🆔 ID real (id_payment_installment): {id_real_installment} | 🪙 ID plan: {id_plan} | "
-                f"💰 Monto total: {monto_total_fmt} | 💵 Pagado: {monto_pagado_fmt} | 📅 Vence: {fecha_vencimiento} | Estado: {status} | "
-                f"Días mora: {dias_mora} | Descuento pronto pago: {descuento_pronto_pago}"
+                f"Nro: {num_installment} | 🆔 ID real (id_payment_installment): {id_real} "
+                f"| 🪙 ID plan: {id_plan} | 💰 Monto total: {amount} | "
+                f"💵 Pagado: {pay_amount} | 📅 Vence: {due_date} | Estado: {status}"
             )
 
-        # Opcional: si quieres devolver también el mapa, podrías retornarlo o almacenarlo en contexto.
         return "\n".join(lines)
 
     except Exception as e:
-        error_msg = f"Error al consultar cuotas pendientes: {str(e)}"
-        print(f"❌ {error_msg}")
-        return f"Error al consultar la base de datos: {str(e)}"
+        return f"❌ Error al consultar cuotas pendientes: {str(e)}"
 
-from decimal import Decimal, InvalidOperation
-from datetime import datetime
 
-from decimal import Decimal, InvalidOperation
-from datetime import datetime
+from decimal import Decimal
 
 @tool
 def registrar_pago(
-    id_payment_installment: int = None,
-    installment_number: int = None,
-    id_payment_plan: int = None,
-    id_sales_orders: int = None,
-    id_client: int = None,
-    amount: float = None,
-    payment_method: str = None,
-    # Transferencia
-    proof_number: str = None,
-    emission_bank: str = None,
-    emission_date: str = None,
-    trans_value: float = None,
-    destiny_bank: str = None,
-    observations: str = None,
-    # Cheque
-    cheque_number: str = None,
-    bank: str = None,
-    emision_date_cheque: str = None,
-    stimate_collection_date: str = None,
-    cheque_value: float = None,
-    notes: str = ""
+    id_sales_orders: int,
+    id_payment_installment: int,
+    id_client: int,
+    payment_method: str,
+    amount: float,
+    notes: str = "",
+    segundo_apellido: str = "",
+    destiny_bank: str = "",
+    proof_number: str = "",
+    emission_bank: str = "",
+    emission_date: str = "",
+    trans_value: float = 0.0,
+    observations: str = "",
+    cheque_number: str = "",
+    bank: str = "",
+    emision_date: str = "",
+    stimate_collection_date: str = "",
+    cheque_value: float = 0.0
 ) -> str:
     """
-    Registra un pago; asume:
-      - payments.id_payment es PK (se obtiene con RETURNING).
-      - payments.id_sales_orders es FK a sales_orders.
-      - transfers.cheques referencian payments.id_payment.
+    Registra un pago para una cuota específica (payment_installment) y actualiza su valor acumulado.
+    Valida campos obligatorios según método de pago.
     """
-
-    # Validaciones básicas
-    if id_payment_installment is None and installment_number is None:
-        return "Proporciona id_payment_installment o installment_number (con id_payment_plan si corresponde)."
-
-    if amount is None:
-        return "Necesito el monto a pagar."
-
     try:
-        monto_a_pagar = Decimal(str(amount))
-    except (InvalidOperation, TypeError):
-        return "El monto no es válido."
+        # Validación de monto
+        if amount is None or amount <= 0:
+            return "❌ El monto del pago debe ser mayor que 0."
 
-    if monto_a_pagar <= 0:
-        return "El monto debe ser mayor a 0."
+        # Normalizar método de pago
+        pm = payment_method.strip().capitalize()
+        if pm not in ["Efectivo", "Transferencia", "Cheque"]:
+            return "❌ Método de pago inválido. Use: Efectivo, Transferencia o Cheque."
 
-    if payment_method not in (None, "Efectivo", "Transferencia", "Cheque"):
-        return "Método inválido."
+        # Validación de campos obligatorios por método
+        if pm == "Efectivo":
+            required_fields = [id_sales_orders, id_payment_installment, id_client, amount]
+        elif pm == "Transferencia":
+            required_fields = [
+                id_sales_orders, id_payment_installment, id_client, amount,
+                proof_number, emission_bank, emission_date, trans_value, destiny_bank
+            ]
+        elif pm == "Cheque":
+            required_fields = [
+                id_sales_orders, id_payment_installment, id_client, amount,
+                cheque_number, bank, emision_date, stimate_collection_date, cheque_value
+            ]
 
-    conn = None
-    try:
+        # Comprobación de campos obligatorios
+        for field in required_fields:
+            if field in [None, ""] or (isinstance(field, (int, float)) and field == 0):
+                return f"❌ Falta un campo obligatorio para el método de pago {pm}."
+
         conn = get_db_connection()
-        cur = conn.cursor()
+        cursor = conn.cursor()
 
-        # Si nos dieron installment_number, mapear al id real dentro del plan
-        if id_payment_installment is None and installment_number is not None:
-            if id_payment_plan is None:
-                return "Cuando usas installment_number, también proporciona id_payment_plan."
-            cur.execute(
-                "SELECT id_payment_installment FROM public.payment_installment WHERE id_payment_plan = %s AND installment_number = %s LIMIT 1;",
-                (id_payment_plan, installment_number)
-            )
-            r = cur.fetchone()
-            if not r:
-                cur.close(); conn.close()
-                return f"No se encontró la cuota {installment_number} en el plan {id_payment_plan}."
-            id_payment_installment = r[0]
-
-        # Bloqueamos la fila para evitar race conditions y obtenemos ids relacionados
-        cur.execute(
-            """
-            SELECT pi.id_payment_installment, pi.id_payment_plan, pp.id_sales_orders, so.id_client,
-                   COALESCE(pi.pay_amount,0) AS pay_amount, pi.amount AS cuota_amount
-            FROM public.payment_installment pi
-            JOIN public.payment_plan pp ON pp.id_payment_plan = pi.id_payment_plan
-            JOIN public.sales_orders so ON so.id_sales_orders = pp.id_sales_orders
-            WHERE pi.id_payment_installment = %s
-            FOR UPDATE;
-            """,
-            (id_payment_installment,)
-        )
-        fila = cur.fetchone()
-        if not fila:
-            cur.close(); conn.close()
-            return f"No existe la cuota con id_payment_installment = {id_payment_installment}."
-
-        db_id_pay_installment, db_id_plan, db_id_sales_orders, db_id_client, db_pay_amount, db_cuota_amount = fila
-
-        # Autocompletar si faltan
-        if id_payment_plan is None:
-            id_payment_plan = db_id_plan
-        if id_sales_orders is None:
-            id_sales_orders = db_id_sales_orders
-        if id_client is None:
-            id_client = db_id_client
-
-        # Validaciones: si el usuario pasó ids, que coincidan
-        if db_id_plan != id_payment_plan:
-            cur.close(); conn.close()
-            return "El id_payment_installment no pertenece al id_payment_plan indicado."
-        if db_id_sales_orders != id_sales_orders:
-            cur.close(); conn.close()
-            return "El id_sales_orders no coincide con la orden asociada al plan/cuota."
-        if db_id_client != id_client:
-            cur.close(); conn.close()
-            return "El id_client no coincide con la orden asociada al plan/cuota."
-
-        # --- Insert en payments: IMPORTANT -> RETURNING id_payment (PK) ---
-        cur.execute(
-            """
-            INSERT INTO public.payments
-                (id_sales_orders, id_payment_plan, id_client, id_payment_installment,
-                 payment_method, amount, notes, created_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())
-            RETURNING id_payment;
-            """,
-            (id_sales_orders, id_payment_plan, id_client, id_payment_installment,
-             payment_method or "Efectivo", float(monto_a_pagar), notes)
-        )
-        row = cur.fetchone()
+        # 1) Consultar monto actual de la cuota
+        cursor.execute("""
+            SELECT pay_amount
+            FROM payment_installment
+            WHERE id_payment_installment = %s;
+        """, (id_payment_installment,))
+        row = cursor.fetchone()
         if not row:
-            conn.rollback(); cur.close(); conn.close()
-            return "Error al insertar el pago en la tabla payments."
-        id_payment = row[0]  # <-- este es el PK que usaremos en transfers/cheques
+            conn.close()
+            return f"❌ No se encontró la cuota con id_payment_installment = {id_payment_installment}"
 
-        # --- Insert en tablas auxiliares usando id_payment (PK) ---
-        if payment_method == "Transferencia":
-            if not all([proof_number, emission_bank, emission_date, trans_value, destiny_bank]):
-                conn.rollback(); cur.close(); conn.close()
-                return "Faltan campos para Transferencia."
-            cur.execute(
-                """
-                INSERT INTO public.transfers
-                    (id_payment, id_payment_installment, proof_number, emission_bank, emission_date, trans_value, destiny_bank, observations, created_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW());
-                """,
-                (id_payment, id_payment_installment, proof_number, emission_bank, emission_date,
-                 float(trans_value), destiny_bank, observations)
-            )
-        elif payment_method == "Cheque":
-            if not all([cheque_number, bank, emision_date_cheque, cheque_value]):
-                conn.rollback(); cur.close(); conn.close()
-                return "Faltan campos para Cheque."
-            cur.execute(
-                """
-                INSERT INTO public.cheques
-                    (id_payment, id_payment_installment, cheque_number, bank, emision_date, stimate_collection_date, cheque_value, observations, created_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW());
-                """,
-                (id_payment, id_payment_installment, cheque_number, bank, emision_date_cheque,
-                 stimate_collection_date, float(cheque_value), observations)
-            )
+        # Conversión segura de monto actual
+        pay_amount_actual = Decimal(str(row[0] or 0))
+        amount_decimal = Decimal(str(amount))
+        nuevo_acumulado = pay_amount_actual + amount_decimal
 
-        # --- Actualizar pay_amount y obtener nuevo acumulado ---
-        cur.execute(
-            """
-            UPDATE public.payment_installment
-            SET pay_amount = COALESCE(pay_amount, 0) + %s,
-                status = CASE WHEN COALESCE(pay_amount, 0) + %s >= amount THEN 'Pagado' ELSE 'Pendiente' END
-            WHERE id_payment_installment = %s
-            RETURNING COALESCE(pay_amount,0) AS nuevo_acumulado, amount;
-            """,
-            (float(monto_a_pagar), float(monto_a_pagar), id_payment_installment)
-        )
-        nuevo_acumulado, cuota_total = cur.fetchone()
+        caja_receipt = "Yes" if pm == "Efectivo" else "No"
+
+        # 2) Insert en payments
+        cursor.execute("""
+            INSERT INTO payments (
+              id_sales_orders,
+              id_payment_installment,
+              id_client,
+              payment_method,
+              amount,
+              payment_date,
+              notes,
+              caja_receipt,
+              segundo_apellido,
+              destiny_bank
+            )
+            VALUES (%s, %s, %s, %s, %s, CURRENT_DATE, %s, %s, %s, %s)
+            RETURNING id_payment;
+        """, (
+            id_sales_orders, id_payment_installment, id_client, pm,
+            amount_decimal, notes, caja_receipt, segundo_apellido, destiny_bank
+        ))
+        id_payment = cursor.fetchone()[0]
+
+        # 3) Inserts adicionales según método
+        if pm == "Transferencia":
+            cursor.execute("""
+                INSERT INTO transfers (
+                  id_payment,
+                  proof_number,
+                  emission_bank,
+                  emission_date,
+                  trans_value,
+                  observations,
+                  destiny_bank
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s);
+            """, (
+                id_payment, proof_number, emission_bank, emission_date,
+                Decimal(str(trans_value)), observations, destiny_bank
+            ))
+
+        elif pm == "Cheque":
+            cursor.execute("""
+                INSERT INTO cheques (
+                  id_payment,
+                  cheque_number,
+                  bank,
+                  emision_date,
+                  stimate_collection_date,
+                  cheque_value,
+                  observations
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s);
+            """, (
+                id_payment, cheque_number, bank, emision_date,
+                stimate_collection_date, Decimal(str(cheque_value)), observations
+            ))
+
+        # 4) Actualizar acumulado de la cuota
+        cursor.execute("""
+            UPDATE payment_installment
+            SET pay_amount = %s,
+                payment_date = CURRENT_DATE
+            WHERE id_payment_installment = %s;
+        """, (nuevo_acumulado, id_payment_installment))
 
         conn.commit()
-        cur.close()
         conn.close()
 
-        return (
-            f"✅ Pago registrado correctamente.\n"
-            f"ID Payment (PK): {id_payment}\n"
-            f"Cuota ID: {id_payment_installment}\n"
-            f"Nuevo acumulado: {Decimal(str(nuevo_acumulado)):,.2f} / {Decimal(str(cuota_total)):,.2f}"
-        )
+        return f"✅ Pago registrado correctamente. ID Payment: {id_payment} | Nuevo acumulado en la cuota: {nuevo_acumulado}"
 
     except Exception as e:
-        if conn:
-            try:
-                conn.rollback(); conn.close()
-            except:
-                pass
         return f"❌ Error al registrar el pago: {str(e)}"
