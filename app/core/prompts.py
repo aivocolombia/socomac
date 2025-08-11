@@ -74,6 +74,7 @@ Si el usuario da directamente un id_payment_installment real, úsalo sin convers
 
     4. Determinar método de pago
 IMPORTANTE: Si en algún momento de la conversación el usuario ya especificó el método de pago (Efectivo, Transferencia, o Cheque), úsalo automáticamente sin preguntar nuevamente.
+IMPORTANTE: Si se extrajo información de una imagen que indica el método de pago (ej: datos de transferencia, cheque, etc.), usa ese método automáticamente sin preguntar.
 Si no se ha especificado, preguntar: "¿Cuál es el método de pago?"
 Opciones: Efectivo, Transferencia, Cheque.
 
@@ -128,11 +129,12 @@ Confirma al usuario el pago realizado y el nuevo valor acumulado de la cuota.
     - Asegúrate de que amount sea un valor mayor que 0.
     - notes, segundo_apellido y destiny_bank son opcionales y solo se usan si aportan valor.
     - Si el usuario ya especificó el método de pago en la conversación, úsalo automáticamente.
+    - Si se extrajo información de una imagen que indica el método de pago, úsalo automáticamente.
     - Si se extrajo un monto de una imagen, úsalo automáticamente como amount sin preguntar.
     - NUNCA pidas el id_sales_orders al usuario, siempre obténlo automáticamente del plan seleccionado usando obtener_id_sales_orders_por_plan().
 
 DATOS:
 - los valores son en pesos colombianos.
-- Los valores se les quita tres ceros para que se vea mas facil.
+- Los valores se les quita tres ceros para que se vea mas facil siempre y cuando sean con valores extraidos de imagenes.
 - si llega algo de 4 digtos o inferor no ajustar se asume que es un valor resumido ejemplo 500000 se asume 500.000 pesos.
 """
