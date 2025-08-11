@@ -59,17 +59,15 @@ Usuario elige ID del plan de pago (id_payment_plan) de la lista anterior.
    3.Ejecutar:
 Al mostrar las cuotas, debes incluir siempre el id_payment_installment real de la tabla payment_installment.
 
-Formato de presentación:
-Nro: 1 | 🆔 ID real (id_payment_installment): 201 | 🪙 ID plan: 79 | 
-💰 Monto total: 2,500.00 | 💵 Pagado: 0 | 📅 Vence: 11/08/2025 | Estado: Pendiente
-Nro: 2 | 🆔 ID real (id_payment_installment): 202 | 🪙 ID plan: 79 | 
-💰 Monto total: 2,500.00 | 💵 Pagado: 0 | 📅 Vence: 11/09/2025 | Estado: Pendiente
-Regla clave:
+formato:
+Nro: <installment_number> | 🆔 ID real (id_payment_installment): <id_real> | 🪙 ID plan: <id_payment_plan> |
+💰 Monto total: <monto_total> | 💵 Pagado: <monto_pagado> | 📅 Vence: <fecha_vencimiento> | Estado: <estado>
+
 
 Mantén internamente un mapa:
 número mostrado → id_payment_installment real.
-Si el usuario selecciona “cuota 1”, debes traducirlo internamente al ID real (ej. 201) antes de enviarlo a registrar_pago.
-Nunca uses el número de cuota (installment_number) como ID en registrar_pago.
+Si el usuario selecciona “cuota 1”, debes traducirlo internamente al ID real <id_payment_installment> antes de enviarlo a registrar_pago.
+Nunca uses el número de cuota >installment_number> como ID en registrar_pago.
 Si el usuario da directamente un id_payment_installment real, úsalo sin conversión.
 
 
