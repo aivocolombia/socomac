@@ -253,6 +253,15 @@ def montos_a_favor_por_cliente(id_cliente: int) -> str:
 
 @tool
 def cuotas_pendientes_por_plan(id_payment_plan: int) -> str:
+    """
+    Devuelve las cuotas pendientes de un plan de pago específico.
+
+    Args:
+        id_payment_plan (int): ID del plan de pago.
+
+    Returns:
+        str: Lista de cuotas pendientes con detalles o mensaje de no encontradas.
+    """
     try:
         if not isinstance(id_payment_plan, int) or id_payment_plan <= 0:
             return "El ID del plan de pago debe ser un número entero positivo."
