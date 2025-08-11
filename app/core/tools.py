@@ -315,6 +315,66 @@ def cuotas_pendientes_por_plan(id_payment_plan: int) -> str:
 from decimal import Decimal
 
 @tool
+def consultar_productos(nombre: str = "", offset: int = 0, limit: int = 10) -> str:
+    """
+    Devuelve una lista de productos filtrados por nombre (opcional) con paginación.
+
+    Args:
+        nombre (str): Nombre o parte del nombre del producto a buscar. Puede estar vacío para traer todos.
+        offset (int): Posición inicial de los resultados (para paginación).
+        limit (int): Número máximo de resultados a devolver.
+
+    Returns:
+        str: Lista de productos encontrados con su ID, nombre, descripción y categoría.
+    """
+    try:
+        print(f"🔍 Buscando productos con nombre: '{nombre}'")
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        query = """
+            SELECT 
+                p.id_product,
+                p.name_product,
+                p.description,
+                p.id_category,
+                c.name_category AS category_name
+            FROM 
+                public.products p
+            LEFT JOIN 
+                public.category c
+            ON 
+                p.id_category = c.id_category
+            WHERE p.name_product ILIKE %s
+            ORDER BY p.name_product
+            OFFSET %s
+            LIMIT %s
+        """
+        
+        patron_busqueda = f"%{nombre}%" if nombre else "%%"
+
+        cursor.execute(query, (patron_busqueda, offset, limit))
+        resultados = cursor.fetchall()
+        conn.close()
+
+        if not resultados:
+            return "No se encontraron productos con los criterios especificados."
+
+        respuesta = []
+        for id_producto, nombre_producto, descripcion, id_categoria, nombre_categoria in resultados:
+            categoria = nombre_categoria if nombre_categoria else "Sin categoría"
+            respuesta.append(f"🆔 ID: {id_producto} | 📦 Producto: {nombre_producto} | 📝 Descripción: {descripcion} | 🏷️ Categoría: {categoria}")
+
+        print(f"✅ Encontrados {len(resultados)} productos")
+        return "\n".join(respuesta)
+        
+    except Exception as e:
+        error_msg = f"Error al consultar productos: {str(e)}"
+        print(f"❌ {error_msg}")
+        return f"Error al consultar la base de datos: {str(e)}"
+
+
+@tool
 def obtener_id_sales_orders_por_plan(id_payment_plan: int) -> str:
     """
     Obtiene el id_sales_orders asociado a un plan de pago específico.
@@ -468,3 +528,158 @@ def registrar_pago(
 
     except Exception as e:
         return f"❌ Error al registrar el pago: {str(e)}"
+
+
+@tool
+def crear_orden_venta(
+    id_client: int,
+    id_classification: int,
+    total: float,
+    discount: float = 0.0,
+    order_date: str = None
+) -> str:
+    """
+    Crea una nueva orden de venta en la base de datos.
+
+    Args:
+        id_client (int): ID del cliente
+        id_classification (int): ID de la clasificación
+        total (float): Total de la orden
+        discount (float, optional): Descuento aplicado. Default 0.0
+        order_date (str, optional): Fecha de la orden en formato YYYY-MM-DD. Si no se proporciona, usa CURRENT_DATE
+
+    Returns:
+        str: ID de la orden creada o mensaje de error
+    """
+    try:
+        if not isinstance(id_client, int) or id_client <= 0:
+            return "❌ El ID del cliente debe ser un número entero positivo."
+        
+        if not isinstance(id_classification, int) or id_classification <= 0:
+            return "❌ El ID de clasificación debe ser un número entero positivo."
+        
+        if not isinstance(total, (int, float)) or total <= 0:
+            return "❌ El total debe ser un número mayor que 0."
+        
+        if not isinstance(discount, (int, float)) or discount < 0:
+            return "❌ El descuento debe ser un número mayor o igual a 0."
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Si no se proporciona fecha, usar CURRENT_DATE
+        if not order_date:
+            order_date = "CURRENT_DATE"
+            query = """
+                INSERT INTO sales_orders (
+                    id_client,
+                    id_classification,
+                    order_date,
+                    total,
+                    discount
+                )
+                VALUES (
+                    %s, %s, CURRENT_DATE, %s, %s
+                )
+                RETURNING id_sales_orders;
+            """
+            cursor.execute(query, (id_client, id_classification, total, discount))
+        else:
+            query = """
+                INSERT INTO sales_orders (
+                    id_client,
+                    id_classification,
+                    order_date,
+                    total,
+                    discount
+                )
+                VALUES (
+                    %s, %s, %s, %s, %s
+                )
+                RETURNING id_sales_orders;
+            """
+            cursor.execute(query, (id_client, id_classification, order_date, total, discount))
+
+        id_sales_orders = cursor.fetchone()[0]
+        conn.commit()
+        conn.close()
+
+        return f"✅ Orden de venta creada exitosamente.\n🆔 ID de la orden: {id_sales_orders}"
+
+    except Exception as e:
+        return f"❌ Error al crear la orden de venta: {str(e)}"
+
+
+@tool
+def agregar_detalle_orden_venta(
+    id_sales_orders: int,
+    id_product: int,
+    quantity: int,
+    unit_price: float
+) -> str:
+    """
+    Agrega un detalle (producto) a una orden de venta existente.
+
+    Args:
+        id_sales_orders (int): ID de la orden de venta
+        id_product (int): ID del producto
+        quantity (int): Cantidad del producto
+        unit_price (float): Precio unitario del producto
+
+    Returns:
+        str: Confirmación de la operación o mensaje de error
+    """
+    try:
+        if not isinstance(id_sales_orders, int) or id_sales_orders <= 0:
+            return "❌ El ID de la orden de venta debe ser un número entero positivo."
+        
+        if not isinstance(id_product, int) or id_product <= 0:
+            return "❌ El ID del producto debe ser un número entero positivo."
+        
+        if not isinstance(quantity, int) or quantity <= 0:
+            return "❌ La cantidad debe ser un número entero positivo."
+        
+        if not isinstance(unit_price, (int, float)) or unit_price <= 0:
+            return "❌ El precio unitario debe ser un número mayor que 0."
+
+        # Calcular subtotal
+        subtotal = quantity * unit_price
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Verificar que la orden de venta existe
+        cursor.execute("SELECT id_sales_orders FROM sales_orders WHERE id_sales_orders = %s", (id_sales_orders,))
+        if not cursor.fetchone():
+            conn.close()
+            return f"❌ No se encontró la orden de venta con ID {id_sales_orders}."
+
+        # Verificar que el producto existe
+        cursor.execute("SELECT name_product FROM products WHERE id_product = %s", (id_product,))
+        producto = cursor.fetchone()
+        if not producto:
+            conn.close()
+            return f"❌ No se encontró el producto con ID {id_product}."
+
+        # Insertar el detalle
+        query = """
+            INSERT INTO sales_order_details (
+                id_sales_orders,
+                id_product,
+                quantity,
+                unit_price,
+                subtotal
+            )
+            VALUES (
+                %s, %s, %s, %s, %s
+            );
+        """
+        cursor.execute(query, (id_sales_orders, id_product, quantity, unit_price, subtotal))
+
+        conn.commit()
+        conn.close()
+
+        return f"✅ Detalle agregado exitosamente a la orden {id_sales_orders}.\n📦 Producto: {producto[0]}\n📊 Cantidad: {quantity}\n💰 Precio unitario: {unit_price}\n💵 Subtotal: {subtotal}"
+
+    except Exception as e:
+        return f"❌ Error al agregar el detalle a la orden: {str(e)}"

@@ -16,7 +16,10 @@ from app.core.tools import (
     montos_a_favor_por_cliente,
     cuotas_pendientes_por_plan,
     obtener_id_sales_orders_por_plan,
-    registrar_pago
+    registrar_pago,
+    consultar_productos,
+    crear_orden_venta,
+    agregar_detalle_orden_venta
 )
 import os
 import json
@@ -40,7 +43,10 @@ tools = [
    montos_a_favor_por_cliente,
    cuotas_pendientes_por_plan,
    obtener_id_sales_orders_por_plan,
-   registrar_pago
+   registrar_pago,
+   consultar_productos,
+   crear_orden_venta,
+   agregar_detalle_orden_venta
 ]
 
 
