@@ -251,7 +251,7 @@ def montos_a_favor_por_cliente(id_cliente: int) -> str:
         print(f"❌ {error_msg}")
         return f"Error al consultar la base de datos: {str(e)}"
 
-
+@tool
 def cuotas_pendientes_por_plan(id_payment_plan: int) -> str:
     try:
         if not isinstance(id_payment_plan, int) or id_payment_plan <= 0:
