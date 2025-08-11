@@ -86,7 +86,8 @@ Plan de pago, Número de cuota, Monto, Método de pago, Campos adicionales
 Llamar a la tool: registrar_pago()
 Cuando muestres las cuotas de un payment_plan al usuario:
 
-Presenta cada cuota en una lista enumerada así:
+Debes asegurarte de traer el id_payment_installment de manera correcta en base a el id_payment_plan que está en la tabla de payment_installment.
+Presenta cada cuota en una lista enumerada así (ejemplo):
 Nro: 1 | ID real: 123 | Monto: $100 | Fecha vencimiento: 2025-09-10
 Nro: 2 | ID real: 124 | Monto: $100 | Fecha vencimiento: 2025-10-10
 
