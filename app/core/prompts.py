@@ -93,7 +93,7 @@ Si es Cheque:
 Insertar en payments, cheques y actualizar pay_amount de la cuota.
     8. Mensaje final
 Si éxito → Mostrar:
-"✅ Pago registrado correctamente. ID Payment: {id_payment} | Nuevo acumulado en la cuota: {nuevo_acumulado}"
+"✅ Pago registrado correctamente. ID Payment:  | Nuevo acumulado en la cuota: "
 
 Si error → Mostrar mensaje de error.
 
