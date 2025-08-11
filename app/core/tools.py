@@ -315,6 +315,43 @@ def cuotas_pendientes_por_plan(id_payment_plan: int) -> str:
 from decimal import Decimal
 
 @tool
+def obtener_id_sales_orders_por_plan(id_payment_plan: int) -> str:
+    """
+    Obtiene el id_sales_orders asociado a un plan de pago específico.
+
+    Args:
+        id_payment_plan (int): ID del plan de pago.
+
+    Returns:
+        str: El id_sales_orders asociado al plan o mensaje de error.
+    """
+    try:
+        if not isinstance(id_payment_plan, int) or id_payment_plan <= 0:
+            return "El ID del plan de pago debe ser un número entero positivo."
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        query = """
+            SELECT id_sales_orders
+            FROM public.payment_plan
+            WHERE id_payment_plan = %s;
+        """
+        cursor.execute(query, (id_payment_plan,))
+        result = cursor.fetchone()
+        conn.close()
+
+        if not result:
+            return f"No se encontró el plan de pago con ID {id_payment_plan}."
+
+        id_sales_orders = result[0]
+        return f"ID de orden de venta: {id_sales_orders}"
+
+    except Exception as e:
+        return f"❌ Error al obtener id_sales_orders: {str(e)}"
+
+
+@tool
 def registrar_pago(
     id_sales_orders: int,
     id_payment_installment: int,

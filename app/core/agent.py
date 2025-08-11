@@ -15,6 +15,7 @@ from app.core.tools import (
     planes_pago_pendientes_por_cliente,
     montos_a_favor_por_cliente,
     cuotas_pendientes_por_plan,
+    obtener_id_sales_orders_por_plan,
     registrar_pago
 )
 import os
@@ -38,6 +39,7 @@ tools = [
    planes_pago_pendientes_por_cliente,
    montos_a_favor_por_cliente,
    cuotas_pendientes_por_plan,
+   obtener_id_sales_orders_por_plan,
    registrar_pago
 ]
 
