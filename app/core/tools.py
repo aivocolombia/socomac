@@ -54,7 +54,7 @@ def nombre_cliente(nombre: str = "", offset: int = 0, limit: int = 10) -> str:
                 c.unique_id AS documento,
                 c.address AS direccion,
                 c.city AS ciudad,
-                c.department AS departamento,
+                c.deparment AS departamento,
                 c.phone AS telefono
             FROM public.clients c
             WHERE COALESCE(NULLIF(c.full_name, ''), '') <> ''
