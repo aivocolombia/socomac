@@ -17,6 +17,7 @@ from app.core.tools import (
     cuotas_pendientes_por_plan,
     obtener_id_sales_orders_por_plan,
     registrar_pago,
+    registrar_pago_directo_orden,
     consultar_productos,
     crear_orden_venta,
     agregar_detalle_orden_venta
@@ -44,6 +45,7 @@ tools = [
    cuotas_pendientes_por_plan,
    obtener_id_sales_orders_por_plan,
    registrar_pago,
+   registrar_pago_directo_orden,
    consultar_productos,
    crear_orden_venta,
    agregar_detalle_orden_venta

@@ -639,6 +639,111 @@ def crear_orden_venta(
 
 
 @tool
+def registrar_pago_directo_orden(
+    id_sales_orders: int,
+    amount: float,
+    metodo_pago: str,
+    proof_number: str = None,
+    emission_bank: str = None,
+    emission_date: str = None,
+    destiny_bank: str = None,
+    observations: str = None,
+    cheque_number: str = None,
+    bank: str = None,
+    emision_date: str = None,
+    stimate_collection_date: str = None,
+    cheque_value: float = None
+) -> str:
+    """
+    Registra un pago directo a una orden de venta (sin payment_plan).
+    Este pago se registra solo en la tabla payments con id_payment_installment = NULL.
+    
+    Args:
+        id_sales_orders (int): ID de la orden de venta
+        amount (float): Monto del pago
+        metodo_pago (str): Método de pago (efectivo, transferencia, cheque)
+        proof_number (str, optional): Número de comprobante para transferencias
+        emission_bank (str, optional): Banco de emisión para transferencias
+        emission_date (str, optional): Fecha de emisión para transferencias
+        destiny_bank (str, optional): Banco de destino para transferencias
+        observations (str, optional): Observaciones adicionales
+        cheque_number (str, optional): Número de cheque
+        bank (str, optional): Banco del cheque
+        emision_date (str, optional): Fecha de emisión del cheque
+        stimate_collection_date (str, optional): Fecha estimada de cobro del cheque
+        cheque_value (float, optional): Valor del cheque
+    """
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        metodo_pago = metodo_pago.strip().lower()
+
+        # === Normalizar y validar destino en transferencias ===
+        if metodo_pago == "transferencia":
+            # Solo validar banco de destino (destiny_bank)
+            bancos_validos = {
+                "bancolombia": "Bancolombia",
+                "davivienda": "Davivienda"
+            }
+            if not destiny_bank:
+                return "❌ Debes indicar el banco destino."
+            destiny_bank_normalizado = destiny_bank.strip().lower()
+            if destiny_bank_normalizado not in bancos_validos:
+                return "❌ Banco destino inválido. Solo se permite 'Bancolombia' o 'Davivienda'."
+            destiny_bank = bancos_validos[destiny_bank_normalizado]
+            trans_value = amount  # Copiar automáticamente
+
+        # === Ajustar amount en caso de cheque ===
+        if metodo_pago == "cheque":
+            if cheque_value is None:
+                return "❌ Debes indicar el valor del cheque."
+            amount = cheque_value
+
+        # === Determinar valor de caja_receipt ===
+        caja_receipt = 'Yes' if metodo_pago == "efectivo" else None
+        
+        # === Insertar en payments con id_payment_installment = NULL ===
+        cursor.execute("""
+            INSERT INTO payments (id_sales_orders, id_payment_installment, amount, payment_method, payment_date, destiny_bank, caja_receipt)
+            VALUES (%s, NULL, %s, %s, CURRENT_DATE, %s, %s)
+            RETURNING id_payment;
+        """, (
+            id_sales_orders, amount, metodo_pago.capitalize(), destiny_bank, caja_receipt
+        ))
+        id_payment = cursor.fetchone()[0]
+
+        # === Insertar en tabla específica según método ===
+        if metodo_pago == "transferencia":
+            cursor.execute("""
+                INSERT INTO transfers (id_payment, proof_number, emission_bank, emission_date, trans_value, destiny_bank, observations)
+                VALUES (%s, %s, %s, %s, %s, %s, %s);
+            """, (
+                id_payment, proof_number, emission_bank, emission_date, trans_value, destiny_bank, observations
+            ))
+
+        elif metodo_pago == "cheque":
+            cursor.execute("""
+                INSERT INTO cheques (id_payment, cheque_number, bank, emision_date, stimate_collection_date, cheque_value, observations)
+                VALUES (%s, %s, %s, %s, %s, %s, %s);
+            """, (
+                id_payment, cheque_number, bank, emision_date, stimate_collection_date, cheque_value, observations
+            ))
+
+        conn.commit()
+        conn.close()
+
+        return (
+            f"✅ Pago directo registrado correctamente a la orden {id_sales_orders}.\n"
+            f"ID Payment: {id_payment}\n"
+            f"Monto: {amount}"
+        )
+
+    except Exception as e:
+        return f"❌ Error al registrar el pago directo: {str(e)}"
+
+
+@tool
 def agregar_detalle_orden_venta(
     id_sales_orders: int,
     id_product: int,

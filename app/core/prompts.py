@@ -60,9 +60,9 @@ Casos:
      - Guardar en memoria el id_classification
      
            PASO 3: Recopilar productos y calcular total
-      - Usar consultar_productos() para mostrar productos disponibles
-      - Para cada producto que el usuario quiera agregar:
-        * Preguntar: "¿Qué producto quieres agregar? (nombre del producto)"
+      - Preguntar: "¿Cuántos productos diferentes quieres agregar a la orden?"
+      - Para cada producto:
+        * Preguntar: "¿Cuál es el nombre del producto [número]?"
         * Buscar productos similares usando consultar_productos(nombre_producto)
         * Si hay productos similares, mostrar opciones y pedir confirmación
         * Preguntar: "¿Cuántas unidades?"
@@ -70,7 +70,6 @@ Casos:
         * Calcular subtotal = cantidad × precio_unitario
         * Confirmar: "¿Confirmas agregar [nombre_producto] - [cantidad] unidades a [precio_unitario] cada una? Subtotal: [subtotal]"
         * Guardar en memoria: id_product, quantity, unit_price, subtotal
-        * Preguntar: "¿Quieres agregar otro producto? (sí/no)"
       - Una vez terminados todos los productos, calcular el TOTAL = suma de todos los subtotales
       - Mostrar resumen: "Total de la orden: [TOTAL] (suma de todos los productos)"
       
@@ -117,14 +116,32 @@ Casos:
      Usuario: "Quiero crear una orden de venta"
      Agente: "Perfecto, vamos a crear una orden de venta paso a paso..."
      [Seguir los 7 pasos detallados arriba]
- 8.  1.Consultar planes del cliente
-Ejecutar:
-planes_pago_pendientes_por_cliente(id_cliente) → muestra planes con deuda.
-montos_a_favor_por_cliente(id_cliente) → muestra si tiene saldos a favor.
-
-               2. Seleccionar plan de pago
-Usuario elige ID del plan de pago (id_payment_plan) de la lista anterior.
-IMPORTANTE: Cuando el usuario seleccione un plan, usa la herramienta obtener_id_sales_orders_por_plan(id_payment_plan) para obtener y guardar en memoria el id_sales_orders asociado a ese plan.
+   8. Registro de pagos:
+     A. Pago a cuota (con payment_plan):
+        1. Consultar planes del cliente
+        - Ejecutar:
+        planes_pago_pendientes_por_cliente(id_cliente) → muestra planes con deuda.
+        montos_a_favor_por_cliente(id_cliente) → muestra si tiene saldos a favor.
+        
+        2. Seleccionar plan de pago
+        - Usuario elige ID del plan de pago (id_payment_plan) de la lista anterior.
+        - IMPORTANTE: Cuando el usuario seleccione un plan, usa la herramienta obtener_id_sales_orders_por_plan(id_payment_plan) para obtener y guardar en memoria el id_sales_orders asociado a ese plan.
+        
+        3. Mostrar cuotas pendientes
+        - Usar cuotas_pendientes_por_plan(id_payment_plan)
+        - Usuario selecciona cuota específica
+        
+        4. Determinar método de pago y registrar
+        - Seguir pasos 4-8 del flujo original
+        
+     B. Pago directo a orden de venta (sin payment_plan):
+        1. Preguntar: "¿Quieres hacer un pago a una cuota específica o un pago directo a una orden de venta?"
+        2. Si elige "pago directo":
+           - Preguntar: "¿Cuál es el ID de la orden de venta?"
+           - Preguntar: "¿Cuál es el monto del pago?"
+           - Determinar método de pago (efectivo, transferencia, cheque)
+           - Solicitar campos según método
+           - Usar registrar_pago_directo_orden() con id_payment_installment = NULL
 
     3. Ejecutar:
 Al mostrar las cuotas, debes incluir siempre el id_payment_installment real de la tabla payment_installment.
@@ -211,6 +228,8 @@ Confirma al usuario el pago realizado y el nuevo valor acumulado de la cuota.
     - Si hay productos con nombres similares, muestra todas las opciones y pide confirmación específica.
     - Una orden de venta puede contener múltiples productos, cada uno como un sales_order_detail separado.
     - El total de la orden se calcula automáticamente sumando todos los subtotales de productos, NO preguntes el total al usuario.
+    - Para pagos directos a órdenes de venta (sin payment_plan), usar registrar_pago_directo_orden() con id_payment_installment = NULL.
+    - Para pagos a cuotas específicas (con payment_plan), usar registrar_pago() con el id_payment_installment correspondiente.
 
 DATOS:
 - los valores son en pesos colombianos.
