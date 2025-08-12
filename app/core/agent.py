@@ -19,6 +19,7 @@ from app.core.tools import (
     registrar_pago,
     registrar_pago_directo_orden,
     consultar_productos,
+    buscar_producto_por_nombre,
     crear_orden_venta,
     agregar_detalle_orden_venta
 )
@@ -47,6 +48,7 @@ tools = [
    registrar_pago,
    registrar_pago_directo_orden,
    consultar_productos,
+   buscar_producto_por_nombre,
    crear_orden_venta,
    agregar_detalle_orden_venta
 ]

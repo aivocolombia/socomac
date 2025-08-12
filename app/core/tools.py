@@ -32,9 +32,9 @@ def nombre_cliente(nombre: str = "", offset: int = 0, limit: int = 10) -> str:
     """
     Devuelve una lista de clientes filtrados por nombre (opcional) con paginación.
     La búsqueda es flexible y encuentra nombres similares.
-
+    
     Args:
-        nombre (str): Nombre o parte del nombre del cliente a buscar. Puede estar vacío para traer todos.
+        nombre (str): Nombre o parte del nombre del cliente a buscar. Vacío = todos.
         offset (int): Posición inicial de los resultados (para paginación).
         limit (int): Número máximo de resultados a devolver.
 
@@ -42,7 +42,16 @@ def nombre_cliente(nombre: str = "", offset: int = 0, limit: int = 10) -> str:
         str: Lista de clientes encontrados con información completa.
     """
     try:
-        print(f"🔍 Buscando clientes con nombre: '{nombre}'")
+        print(f"👤 Buscando clientes con nombre: '{nombre}'")
+        
+        # (Opcional) límites sanos para evitar abusos
+        if limit <= 0:
+            limit = 10
+        if limit > 100:
+            limit = 100
+        if offset < 0:
+            offset = 0
+
         conn = get_db_connection()
         cursor = conn.cursor()
 
@@ -77,29 +86,61 @@ def nombre_cliente(nombre: str = "", offset: int = 0, limit: int = 10) -> str:
         if not resultados:
             return "No se encontraron clientes con los criterios especificados."
 
-        respuesta = []
-        for id_cliente, nombre_cliente, empresa, documento, direccion, ciudad, departamento, telefono in resultados:
-            # Formatear información de manera clara
-            info_cliente = f"🆔 ID: {id_cliente} | 👤 Nombre: {nombre_cliente}"
+        # Si se busca un nombre específico y hay pocos resultados, mostrar información detallada
+        if nombre and len(resultados) <= 3:
+            respuesta = []
+            for id_cliente, nombre_cliente, empresa, documento, direccion, ciudad, departamento, telefono in resultados:
+                # Formatear información de manera clara
+                info_cliente = f"🆔 ID: {id_cliente} | 👤 Nombre: {nombre_cliente}"
+                
+                # Agregar información adicional si está disponible
+                if empresa:
+                    info_cliente += f" | 🏢 Empresa: {empresa}"
+                if documento:
+                    info_cliente += f" | 📄 Documento: {documento}"
+                if direccion:
+                    info_cliente += f" | 📍 Dirección: {direccion}"
+                if ciudad:
+                    info_cliente += f" | 🏙️ Ciudad: {ciudad}"
+                if departamento:
+                    info_cliente += f" | 🗺️ Departamento: {departamento}"
+                if telefono:
+                    info_cliente += f" | 📞 Teléfono: {telefono}"
+                
+                respuesta.append(info_cliente)
             
-            # Agregar información adicional si está disponible
-            if empresa:
-                info_cliente += f" | 🏢 Empresa: {empresa}"
-            if documento:
-                info_cliente += f" | 📄 Documento: {documento}"
-            if direccion:
-                info_cliente += f" | 📍 Dirección: {direccion}"
-            if ciudad:
-                info_cliente += f" | 🏙️ Ciudad: {ciudad}"
-            if departamento:
-                info_cliente += f" | 🗺️ Departamento: {departamento}"
-            if telefono:
-                info_cliente += f" | 📞 Teléfono: {telefono}"
-            
-            respuesta.append(info_cliente)
+            if len(resultados) == 1:
+                respuesta.insert(0, "✅ Cliente encontrado:")
+            else:
+                respuesta.insert(0, f"👥 Se encontraron {len(resultados)} clientes similares:")
+                
+            print(f"✅ Encontrados {len(resultados)} clientes")
+            return "\n".join(respuesta)
+        else:
+            # Para búsquedas generales o muchos resultados, mostrar información básica
+            respuesta = []
+            for id_cliente, nombre_cliente, empresa, documento, direccion, ciudad, departamento, telefono in resultados:
+                # Formatear información básica
+                info_cliente = f"🆔 ID: {id_cliente} | 👤 Nombre: {nombre_cliente}"
+                
+                # Agregar información adicional si está disponible
+                if empresa:
+                    info_cliente += f" | 🏢 Empresa: {empresa}"
+                if documento:
+                    info_cliente += f" | 📄 Documento: {documento}"
+                if direccion:
+                    info_cliente += f" | 📍 Dirección: {direccion}"
+                if ciudad:
+                    info_cliente += f" | 🏙️ Ciudad: {ciudad}"
+                if departamento:
+                    info_cliente += f" | 🗺️ Departamento: {departamento}"
+                if telefono:
+                    info_cliente += f" | 📞 Teléfono: {telefono}"
+                
+                respuesta.append(info_cliente)
 
-        print(f"✅ Encontrados {len(resultados)} clientes")
-        return "\n".join(respuesta)
+            print(f"✅ Encontrados {len(resultados)} clientes")
+            return "\n".join(respuesta)
         
     except Exception as e:
         error_msg = f"Error al consultar clientes: {str(e)}"
@@ -816,3 +857,76 @@ def agregar_detalle_orden_venta(
 
     except Exception as e:
         return f"❌ Error al agregar el detalle a la orden: {str(e)}"
+
+
+@tool
+def buscar_producto_por_nombre(nombre_producto: str) -> str:
+    """
+    Busca un producto específico por nombre y devuelve su información completa.
+    Esta herramienta es útil para obtener el ID correcto de un producto antes de crear sales_order_details.
+
+    Args:
+        nombre_producto (str): Nombre del producto a buscar (búsqueda flexible)
+
+    Returns:
+        str: Información completa del producto encontrado o mensaje de error
+    """
+    try:
+        if not nombre_producto or not nombre_producto.strip():
+            return "❌ Debes proporcionar el nombre del producto a buscar."
+
+        print(f"🔍 Buscando producto específico: '{nombre_producto}'")
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        query = """
+            SELECT 
+                p.id_product,
+                p.name_product,
+                p.description,
+                p.id_category,
+                c.name_category AS category_name
+            FROM 
+                public.products p
+            LEFT JOIN 
+                public.category c ON p.id_category = c.id_category
+            WHERE p.name_product ILIKE %s
+            ORDER BY p.name_product
+            LIMIT 5
+        """
+        
+        patron_busqueda = f"%{nombre_producto.strip()}%"
+        cursor.execute(query, (patron_busqueda,))
+        resultados = cursor.fetchall()
+        conn.close()
+
+        if not resultados:
+            return f"❌ No se encontró ningún producto con el nombre '{nombre_producto}'."
+
+        if len(resultados) == 1:
+            # Producto único encontrado
+            id_producto, nombre_producto, descripcion, id_categoria, nombre_categoria = resultados[0]
+            categoria = nombre_categoria if nombre_categoria else "Sin categoría"
+            return (
+                f"✅ Producto encontrado:\n"
+                f"🆔 ID: {id_producto}\n"
+                f"📦 Nombre: {nombre_producto}\n"
+                f"📝 Descripción: {descripcion}\n"
+                f"🏷️ Categoría: {categoria}"
+            )
+        else:
+            # Múltiples productos encontrados
+            respuesta = [f"🔍 Se encontraron {len(resultados)} productos similares a '{nombre_producto}':"]
+            for id_producto, nombre_producto, descripcion, id_categoria, nombre_categoria in resultados:
+                categoria = nombre_categoria if nombre_categoria else "Sin categoría"
+                respuesta.append(
+                    f"🆔 ID: {id_producto} | 📦 {nombre_producto} | 📝 {descripcion} | 🏷️ {categoria}"
+                )
+            respuesta.append("\n💡 Por favor, especifica el nombre exacto del producto que deseas usar.")
+            return "\n".join(respuesta)
+
+    except Exception as e:
+        return f"❌ Error al buscar el producto: {str(e)}"
+
+
+
