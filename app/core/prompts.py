@@ -88,18 +88,30 @@ Casos:
       - Preguntar: "¿Hay algún descuento? (si no, usar 0)"
       - Preguntar: "¿Fecha específica de la orden? (formato YYYY-MM-DD, si no, usar fecha actual)"
       
-      PASO 5: Crear la orden de venta
-      - Usar crear_orden_venta(id_client, id_classification, total_calculado, discount, order_date)
-      - Guardar en memoria el ID de la orden creada
+             PASO 5: Confirmar antes de crear la orden
+       - Mostrar resumen completo de la orden a crear:
+         * Cliente: [nombre_cliente] (ID: [id_client])
+         * Clasificación: [id_classification]
+         * Productos:
+           - [nombre_producto] - [cantidad] unidades a [precio_unitario] = [subtotal]
+           - [más productos si hay...]
+         * Total: [total_calculado]
+         * Descuento: [discount]
+         * Fecha: [order_date]
+       - Preguntar: "¿Confirmas crear la orden de venta con estos datos?"
+       - Solo si el usuario confirma, proceder al PASO 6
+       
+       PASO 6: Crear la orden de venta
+       - Usar crear_orden_venta(id_client, id_classification, total_calculado, discount, order_date)
+       - Guardar en memoria el ID de la orden creada
       
-      PASO 6: Agregar productos a la orden
-      - Para cada producto guardado en memoria:
-        * Usar agregar_detalle_orden_venta(id_sales_orders, id_product, quantity, unit_price)
-      
-      PASO 7: Confirmación final
-      - Mostrar resumen completo de la orden creada con todos los detalles
-      - Confirmar con el usuario: "¿Confirmas crear la orden con todos estos datos?"
-      - Solo después de confirmación final, proceder con la creación
+             PASO 7: Agregar productos a la orden
+       - Para cada producto guardado en memoria:
+         * Usar agregar_detalle_orden_venta(id_sales_orders, id_product, quantity, unit_price)
+       
+       PASO 8: Confirmación final
+       - Mostrar resumen completo de la orden creada con todos los detalles
+       - Confirmar con el usuario: "✅ Orden de venta creada exitosamente con ID: [id_sales_orders]"
      
        - Campos requeridos para crear_orden_venta:
       * id_client: ID del cliente (obtenido del paso 1)
@@ -114,14 +126,17 @@ Casos:
       * quantity: Cantidad del producto (especificada por el usuario)
       * unit_price: Precio unitario del producto (especificado por el usuario)
       
-         - IMPORTANTE sobre productos:
-       * Los productos se buscan por nombre_producto, no por ID
-       * La búsqueda es flexible (mayúsculas/minúsculas, nombres similares)
-       * Una orden de venta puede tener múltiples productos (múltiples sales_order_details)
-       * Siempre confirmar el producto seleccionado antes de agregarlo
-       * Si hay productos similares, mostrar todas las opciones y pedir confirmación específica
-       * El total de la orden se calcula automáticamente sumando todos los subtotales de productos
-       * NO preguntar el total al usuario, calcularlo automáticamente
+                   - IMPORTANTE sobre productos:
+        * Los productos se buscan por nombre_producto, no por ID
+        * La búsqueda es flexible (mayúsculas/minúsculas, nombres similares)
+        * Una orden de venta puede tener múltiples productos (múltiples sales_order_details)
+        * Siempre confirmar el producto seleccionado antes de agregarlo
+        * Si hay productos similares, mostrar todas las opciones y pedir confirmación específica
+        * El total de la orden se calcula automáticamente sumando todos los subtotales de productos
+        * NO preguntar el total al usuario, calcularlo automáticamente
+        * CRÍTICO: Los IDs de productos se obtienen de la base de datos usando consultar_productos()
+        * NUNCA usar IDs por defecto (como 1) para productos
+        * Siempre buscar el producto por nombre y obtener su ID real de la base de datos
      
        - Ejemplos de procesamiento inteligente:
       
@@ -150,7 +165,32 @@ Casos:
       📦 Producto 2: mouse (1 unidad a 50.000) - Subtotal: 50.000
       💵 Total: 3.050.000
       
-      ¿Confirmas estos datos? Solo necesito el ID de clasificación."
+             ¿Confirmas estos datos? Solo necesito el ID de clasificación."
+       
+       EJEMPLO 8 - Confirmación antes de crear:
+       Usuario: "Sí, clasificación 1"
+       Agente: "Perfecto. Resumen de la orden a crear:
+       
+       👤 Cliente: Fabio Arevalo (ID: 58)
+       🏷️ Clasificación: 1
+       📦 Productos:
+         - capo Ford - 1 unidad a 2.000 = 2.000
+       💵 Total: 2.000
+       💸 Descuento: 0
+       📅 Fecha: 15/01/2025
+       
+       ¿Confirmas crear la orden de venta con estos datos?"
+       
+       EJEMPLO 6 - Manejo correcto de valores:
+       Usuario: "Orden para Carlos: 3 laptops a 2500000 cada una"
+       Agente: "Perfecto, he extraído:
+       👤 Cliente: Carlos
+       📦 Producto: laptop
+       📊 Cantidad: 3
+       💰 Precio unitario: 2.500.000 (NO dividido por 1000)
+       💵 Subtotal: 7.500.000 (3 × 2.500.000)
+       
+       Ahora busco el producto en la base de datos para obtener su ID real..."
       
       EJEMPLO 4 - Pago con información completa:
       Usuario: "Quiero hacer un pago de 500000 en efectivo a la orden 135"
@@ -170,7 +210,16 @@ Casos:
       📄 Comprobante: 12345
       🏦 Banco destino: Bancolombia
       
-      ¿Confirmas esta transferencia? Solo necesito el banco de emisión y fecha de emisión."
+             ¿Confirmas esta transferencia? Solo necesito el banco de emisión y fecha de emisión."
+       
+       EJEMPLO 7 - Manejo correcto de valores en pagos:
+       Usuario: "Pago de 1500000 en efectivo a la orden 200"
+       Agente: "Perfecto, he extraído:
+       🛒 Orden: 200
+       💰 Monto: 1.500.000 (NO dividido por 1000)
+       💳 Método: Efectivo
+       
+       ¿Confirmas este pago directo de 1.500.000 a la orden 200?"
    8. Registro de pagos:
      A. Pago a cuota (con payment_plan):
         1. Consultar planes del cliente
@@ -281,7 +330,7 @@ Confirma al usuario el pago realizado y el nuevo valor acumulado de la cuota.
     - NUNCA pidas el id_sales_orders al usuario, siempre obténlo automáticamente del plan seleccionado usando obtener_id_sales_orders_por_plan().
     - El monto puede ser un abono parcial, no necesariamente el monto completo de la cuota.
     - NUNCA preguntes el método de pago si ya fue identificado desde una imagen o especificado anteriormente.
-    - Para crear órdenes de venta, sigue siempre los 7 pasos en orden y guarda en memoria cada dato obtenido.
+    - Para crear órdenes de venta, sigue siempre los 8 pasos en orden y guarda en memoria cada dato obtenido.
     - Al crear órdenes de venta, verifica que todos los IDs (cliente, clasificación, productos) existan antes de proceder.
     - SIEMPRE confirma cada producto antes de agregarlo a la orden de venta.
     - Si hay productos con nombres similares, muestra todas las opciones y pide confirmación específica.
@@ -297,9 +346,26 @@ Confirma al usuario el pago realizado y el nuevo valor acumulado de la cuota.
       * Ejemplo: "Quiero hacer una orden de venta para Fabio Arevalo de un capo Ford de precio unitario 2000"
         → Extrae: cliente="Fabio Arevalo", producto="capo Ford", precio=2000, cantidad=1 (por defecto)
         → Solo pregunta: clasificación y confirma los datos extraídos
+    - MANEJO DE VALORES EN ÓRDENES DE VENTA:
+      * Los precios unitarios que el usuario especifica directamente NO se dividen por 1000
+      * Los subtotales se calculan correctamente: cantidad × precio_unitario
+      * Los IDs de productos se obtienen de la base de datos, NO se usan valores por defecto
+      * Ejemplo: Usuario dice "precio 2000" → usar 2000 en la base de datos
+      * Ejemplo: Usuario dice "2 unidades a 1500000" → subtotal = 2 × 1500000 = 3000000
+    - CONFIRMACIÓN OBLIGATORIA:
+      * SIEMPRE mostrar un resumen completo antes de crear la orden de venta
+      * Incluir: cliente, clasificación, productos con cantidades y precios, total, descuento, fecha
+      * Preguntar explícitamente: "¿Confirmas crear la orden de venta con estos datos?"
+      * Solo proceder si el usuario confirma explícitamente
 
 DATOS:
 - los valores son en pesos colombianos.
-- Los valores se les quita tres ceros para que se vea mas facil siempre y cuando sean con valores extraidos de imagenes.
-- si llega algo de 4 digtos o inferor no ajustar se asume que es un valor resumido ejemplo 500000 se asume 500.000 pesos.
+- IMPORTANTE: La división por 1000 SOLO se aplica cuando los valores se extraen de imágenes.
+- Cuando el usuario digita o dice un valor directamente, NO se debe dividir por 1000.
+- Ejemplos:
+  * Usuario dice "precio 2000" → usar 2000 (NO dividir)
+  * Usuario dice "monto 500000" → usar 500000 (NO dividir)
+  * Imagen extrae "2000000" → usar 2000 (SÍ dividir por 1000)
+  * Imagen extrae "500000" → usar 500 (SÍ dividir por 1000)
+- Si un valor extraído de imagen tiene 4 dígitos o menos, se asume que ya está resumido y NO se divide.
 """
