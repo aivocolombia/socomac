@@ -846,14 +846,16 @@ def agregar_detalle_orden_venta(
             )
             VALUES (
                 %s, %s, %s, %s, %s
-            );
+            )
+            RETURNING id_sales_order_details;
         """
         cursor.execute(query, (id_sales_orders, id_product, quantity, unit_price, subtotal))
+        id_sales_order_details = cursor.fetchone()[0]
 
         conn.commit()
         conn.close()
 
-        return f"✅ Detalle agregado exitosamente a la orden {id_sales_orders}.\n📦 Producto: {producto[0]}\n📊 Cantidad: {quantity}\n💰 Precio unitario: {unit_price}\n💵 Subtotal: {subtotal}"
+        return f"✅ Detalle agregado exitosamente a la orden {id_sales_orders}.\n📦 Producto: {producto[0]}\n📊 Cantidad: {quantity}\n💰 Precio unitario: {unit_price}\n💵 Subtotal: {subtotal}\n🆔 ID del detalle: {id_sales_order_details}"
 
     except Exception as e:
         return f"❌ Error al agregar el detalle a la orden: {str(e)}"
