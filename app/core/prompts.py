@@ -122,7 +122,7 @@ Casos:
        - Mostrar resumen completo de la orden creada con todos los detalles
        - Confirmar: "✅ Orden de venta [ID] creada exitosamente con [X] productos"
        - Mostrar: "🆔 ID de la orden: [id_sales_orders]"
-       - Mostrar: "📋 IDs de detalles: [lista de id_sales_order_details]"
+       - Mostrar: "📋 IDs de detalles: [lista de id_sales_order_detail]"
      
        - Campos requeridos para crear_orden_venta:
       * id_client: ID del cliente (obtenido del paso 1)
@@ -424,8 +424,8 @@ Confirma al usuario el pago realizado y el nuevo valor acumulado de la cuota.
       * NUNCA omitir la creación de detalles, es obligatorio
       * Si hay error en algún detalle, mostrar el error específico y continuar con los demás
       * Al final, mostrar resumen: "✅ Orden de venta [ID] creada exitosamente con [X] productos"
-      * Mostrar: "🆔 ID de la orden: [id_sales_orders]"
-      * Mostrar: "📋 IDs de detalles: [lista de id_sales_order_details]"
+             * Mostrar: "🆔 ID de la orden: [id_sales_orders]"
+       * Mostrar: "📋 IDs de detalles: [lista de id_sales_order_detail]"
 
 DATOS:
 - los valores son en pesos colombianos.
