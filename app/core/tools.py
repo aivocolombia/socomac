@@ -31,6 +31,7 @@ def limpiar_memoria(phone: str) -> str:
 def nombre_cliente(nombre: str = "", offset: int = 0, limit: int = 10) -> str:
     """
     Devuelve una lista de clientes filtrados por nombre (opcional) con paginación.
+    La búsqueda es flexible y encuentra nombres similares.
 
     Args:
         nombre (str): Nombre o parte del nombre del cliente a buscar. Puede estar vacío para traer todos.
@@ -38,7 +39,7 @@ def nombre_cliente(nombre: str = "", offset: int = 0, limit: int = 10) -> str:
         limit (int): Número máximo de resultados a devolver.
 
     Returns:
-        str: Lista de clientes encontrados con su ID y nombre.
+        str: Lista de clientes encontrados con información completa.
     """
     try:
         print(f"🔍 Buscando clientes con nombre: '{nombre}'")
@@ -48,18 +49,28 @@ def nombre_cliente(nombre: str = "", offset: int = 0, limit: int = 10) -> str:
         query = """
             SELECT DISTINCT
                 c.id_client AS id,
-                c.full_name AS nombre
+                c.full_name AS nombre,
+                c.company AS empresa,
+                c.unique_id AS documento,
+                c.address AS direccion,
+                c.city AS ciudad,
+                c.department AS departamento,
+                c.phone AS telefono
             FROM public.clients c
             WHERE COALESCE(NULLIF(c.full_name, ''), '') <> ''
-              AND c.full_name ILIKE %s
-            ORDER BY nombre
+              AND (
+                c.full_name ILIKE %s 
+                OR c.company ILIKE %s 
+                OR c.unique_id ILIKE %s
+              )
+            ORDER BY c.full_name
             OFFSET %s
             LIMIT %s
         """
         
         patron_busqueda = f"%{nombre}%" if nombre else "%%"
 
-        cursor.execute(query, (patron_busqueda, offset, limit))
+        cursor.execute(query, (patron_busqueda, patron_busqueda, patron_busqueda, offset, limit))
         resultados = cursor.fetchall()
         conn.close()
 
@@ -67,8 +78,25 @@ def nombre_cliente(nombre: str = "", offset: int = 0, limit: int = 10) -> str:
             return "No se encontraron clientes con los criterios especificados."
 
         respuesta = []
-        for id_cliente, nombre_cliente in resultados:
-            respuesta.append(f"🆔 ID: {id_cliente} | 👤 Nombre: {nombre_cliente}")
+        for id_cliente, nombre_cliente, empresa, documento, direccion, ciudad, departamento, telefono in resultados:
+            # Formatear información de manera clara
+            info_cliente = f"🆔 ID: {id_cliente} | 👤 Nombre: {nombre_cliente}"
+            
+            # Agregar información adicional si está disponible
+            if empresa:
+                info_cliente += f" | 🏢 Empresa: {empresa}"
+            if documento:
+                info_cliente += f" | 📄 Documento: {documento}"
+            if direccion:
+                info_cliente += f" | 📍 Dirección: {direccion}"
+            if ciudad:
+                info_cliente += f" | 🏙️ Ciudad: {ciudad}"
+            if departamento:
+                info_cliente += f" | 🗺️ Departamento: {departamento}"
+            if telefono:
+                info_cliente += f" | 📞 Teléfono: {telefono}"
+            
+            respuesta.append(info_cliente)
 
         print(f"✅ Encontrados {len(resultados)} clientes")
         return "\n".join(respuesta)
