@@ -481,11 +481,49 @@ def obtener_id_sales_orders_por_plan(id_payment_plan: int) -> str:
 
 
 @tool
+def obtener_id_client_por_orden(id_sales_orders: int) -> str:
+    """
+    Obtiene el id_client asociado a una orden de venta específica.
+
+    Args:
+        id_sales_orders (int): ID de la orden de venta.
+
+    Returns:
+        str: El id_client asociado a la orden o mensaje de error.
+    """
+    try:
+        if not isinstance(id_sales_orders, int) or id_sales_orders <= 0:
+            return "El ID de la orden de venta debe ser un número entero positivo."
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        query = """
+            SELECT id_client
+            FROM public.sales_orders
+            WHERE id_sales_orders = %s;
+        """
+        cursor.execute(query, (id_sales_orders,))
+        result = cursor.fetchone()
+        conn.close()
+
+        if not result:
+            return f"No se encontró la orden de venta con ID {id_sales_orders}."
+
+        id_client = result[0]
+        return f"ID de cliente: {id_client}"
+
+    except Exception as e:
+        return f"❌ Error al obtener id_client: {str(e)}"
+
+
+@tool
 def registrar_pago(
     id_sales_orders: int,
     id_payment_installment: int,
     amount: float,
     metodo_pago: str,
+    id_client: int,
     proof_number: str = None,
     emission_bank: str = None,
     emission_date: str = None,
@@ -505,21 +543,22 @@ def registrar_pago(
     - Cheque → payments + cheques (amount = cheque_value)
     Actualiza el acumulado pagado en la cuota.
     
-    Args:
-        id_sales_orders (int): ID de la orden de venta
-        id_payment_installment (int): ID de la cuota de pago
-        amount (float): Monto del pago
-        metodo_pago (str): Método de pago (efectivo, transferencia, cheque)
-        proof_number (str, optional): Número de comprobante para transferencias
-        emission_bank (str, optional): Banco de emisión para transferencias
-        emission_date (str, optional): Fecha de emisión para transferencias
-        destiny_bank (str, optional): Banco de destino para transferencias
-        observations (str, optional): Observaciones adicionales
-        cheque_number (str, optional): Número de cheque
-        bank (str, optional): Banco del cheque
-        emision_date (str, optional): Fecha de emisión del cheque
-        stimate_collection_date (str, optional): Fecha estimada de cobro del cheque
-        cheque_value (float, optional): Valor del cheque
+         Args:
+         id_sales_orders (int): ID de la orden de venta
+         id_payment_installment (int): ID de la cuota de pago
+         amount (float): Monto del pago
+         metodo_pago (str): Método de pago (efectivo, transferencia, cheque)
+         id_client (int): ID del cliente
+         proof_number (str, optional): Número de comprobante para transferencias
+         emission_bank (str, optional): Banco de emisión para transferencias
+         emission_date (str, optional): Fecha de emisión para transferencias
+         destiny_bank (str, optional): Banco de destino para transferencias
+         observations (str, optional): Observaciones adicionales
+         cheque_number (str, optional): Número de cheque
+         bank (str, optional): Banco del cheque
+         emision_date (str, optional): Fecha de emisión del cheque
+         stimate_collection_date (str, optional): Fecha estimada de cobro del cheque
+         cheque_value (float, optional): Valor del cheque
     """
     try:
         conn = get_db_connection()
@@ -554,11 +593,11 @@ def registrar_pago(
         
         # === Insertar en payments ===
         cursor.execute("""
-            INSERT INTO payments (id_sales_orders, id_payment_installment, amount, payment_method, payment_date, destiny_bank, caja_receipt)
-            VALUES (%s, %s, %s, %s, CURRENT_DATE, %s, %s)
+            INSERT INTO payments (id_sales_orders, id_payment_installment, amount, payment_method, payment_date, destiny_bank, caja_receipt, id_client)
+            VALUES (%s, %s, %s, %s, CURRENT_DATE, %s, %s, %s)
             RETURNING id_payment;
         """, (
-            id_sales_orders, id_payment_installment, amount, metodo_pago.capitalize(), destiny_bank, caja_receipt
+            id_sales_orders, id_payment_installment, amount, metodo_pago.capitalize(), destiny_bank, caja_receipt, id_client
         ))
         id_payment = cursor.fetchone()[0]
 
@@ -684,6 +723,7 @@ def registrar_pago_directo_orden(
     id_sales_orders: int,
     amount: float,
     metodo_pago: str,
+    id_client: int,
     proof_number: str = None,
     emission_bank: str = None,
     emission_date: str = None,
@@ -699,20 +739,21 @@ def registrar_pago_directo_orden(
     Registra un pago directo a una orden de venta (sin payment_plan).
     Este pago se registra solo en la tabla payments con id_payment_installment = NULL.
     
-    Args:
-        id_sales_orders (int): ID de la orden de venta
-        amount (float): Monto del pago
-        metodo_pago (str): Método de pago (efectivo, transferencia, cheque)
-        proof_number (str, optional): Número de comprobante para transferencias
-        emission_bank (str, optional): Banco de emisión para transferencias
-        emission_date (str, optional): Fecha de emisión para transferencias
-        destiny_bank (str, optional): Banco de destino para transferencias
-        observations (str, optional): Observaciones adicionales
-        cheque_number (str, optional): Número de cheque
-        bank (str, optional): Banco del cheque
-        emision_date (str, optional): Fecha de emisión del cheque
-        stimate_collection_date (str, optional): Fecha estimada de cobro del cheque
-        cheque_value (float, optional): Valor del cheque
+         Args:
+         id_sales_orders (int): ID de la orden de venta
+         amount (float): Monto del pago
+         metodo_pago (str): Método de pago (efectivo, transferencia, cheque)
+         id_client (int): ID del cliente
+         proof_number (str, optional): Número de comprobante para transferencias
+         emission_bank (str, optional): Banco de emisión para transferencias
+         emission_date (str, optional): Fecha de emisión para transferencias
+         destiny_bank (str, optional): Banco de destino para transferencias
+         observations (str, optional): Observaciones adicionales
+         cheque_number (str, optional): Número de cheque
+         bank (str, optional): Banco del cheque
+         emision_date (str, optional): Fecha de emisión del cheque
+         stimate_collection_date (str, optional): Fecha estimada de cobro del cheque
+         cheque_value (float, optional): Valor del cheque
     """
     try:
         conn = get_db_connection()
@@ -746,11 +787,11 @@ def registrar_pago_directo_orden(
         
         # === Insertar en payments con id_payment_installment = NULL ===
         cursor.execute("""
-            INSERT INTO payments (id_sales_orders, id_payment_installment, amount, payment_method, payment_date, destiny_bank, caja_receipt)
-            VALUES (%s, NULL, %s, %s, CURRENT_DATE, %s, %s)
+            INSERT INTO payments (id_sales_orders, id_payment_installment, amount, payment_method, payment_date, destiny_bank, caja_receipt, id_client)
+            VALUES (%s, NULL, %s, %s, CURRENT_DATE, %s, %s, %s)
             RETURNING id_payment;
         """, (
-            id_sales_orders, amount, metodo_pago.capitalize(), destiny_bank, caja_receipt
+            id_sales_orders, amount, metodo_pago.capitalize(), destiny_bank, caja_receipt, id_client
         ))
         id_payment = cursor.fetchone()[0]
 
