@@ -516,7 +516,9 @@ def obtener_id_client_por_orden(id_sales_orders: int) -> str:
         return f"ID de cliente: {id_client}"
 
     except Exception as e:
-        return f"❌ Error al obtener id_client: {str(e)}"
+        error_msg = f"❌ Error al obtener id_client: {str(e)}"
+        print(f"❌ {error_msg}")
+        return error_msg
 
 
 @tool
