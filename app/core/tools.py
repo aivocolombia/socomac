@@ -31,7 +31,7 @@ def nombre_cliente(nombre: str = "", offset: int = 0, limit: int = 10) -> str:
     """
     Devuelve una lista de clientes filtrados por nombre (opcional) con paginación.
     La búsqueda es flexible y encuentra nombres similares.
-    
+
     Args:
         nombre (str): Nombre o parte del nombre del cliente a buscar. Vacío = todos.
         offset (int): Posición inicial de los resultados (para paginación).
@@ -87,7 +87,7 @@ def nombre_cliente(nombre: str = "", offset: int = 0, limit: int = 10) -> str:
 
         # Si se busca un nombre específico y hay pocos resultados, mostrar información detallada
         if nombre and len(resultados) <= 3:
-            respuesta = []
+        respuesta = []
             for id_cliente, nombre_cliente, empresa, documento, direccion, ciudad, departamento, telefono in resultados:
                 # Formatear información de manera clara
                 info_cliente = f"🆔 ID: {id_cliente} | 👤 Nombre: {nombre_cliente}"
@@ -138,8 +138,8 @@ def nombre_cliente(nombre: str = "", offset: int = 0, limit: int = 10) -> str:
                 
                 respuesta.append(info_cliente)
 
-            print(f"✅ Encontrados {len(resultados)} clientes")
-            return "\n".join(respuesta)
+        print(f"✅ Encontrados {len(resultados)} clientes")
+        return "\n".join(respuesta)
         
     except Exception as e:
         error_msg = f"Error al consultar clientes: {str(e)}"
@@ -1115,7 +1115,7 @@ def crear_plan_financiamiento(
             f"📝 Tipo: {type_payment_plan}\n"
             f"📋 Estado: Pendiente"
         )
-        
+
     except Exception as e:
         error_msg = f"❌ Error al crear el plan de financiamiento: {str(e)}"
         print(f"❌ {error_msg}")
