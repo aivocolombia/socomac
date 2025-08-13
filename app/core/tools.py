@@ -477,7 +477,9 @@ def obtener_id_sales_orders_por_plan(id_payment_plan: int) -> str:
         return f"ID de orden de venta: {id_sales_orders}"
 
     except Exception as e:
-        return f"❌ Error al obtener id_sales_orders: {str(e)}"
+        error_msg = f"❌ Error al obtener id_sales_orders: {str(e)}"
+        print(f"❌ {error_msg}")
+        return error_msg
 
 
 @tool
@@ -638,7 +640,9 @@ def registrar_pago(
         )
 
     except Exception as e:
-        return f"❌ Error al registrar el pago: {str(e)}"
+        error_msg = f"❌ Error al registrar el pago: {str(e)}"
+        print(f"❌ {error_msg}")
+        return error_msg
 
 
 @tool
@@ -718,7 +722,9 @@ def crear_orden_venta(
         return f"✅ Orden de venta creada exitosamente.\n🆔 ID de la orden: {id_sales_orders}"
 
     except Exception as e:
-        return f"❌ Error al crear la orden de venta: {str(e)}"
+        error_msg = f"❌ Error al crear la orden de venta: {str(e)}"
+        print(f"❌ {error_msg}")
+        return error_msg
 
 
 @tool
@@ -825,7 +831,9 @@ def registrar_pago_directo_orden(
         )
 
     except Exception as e:
-        return f"❌ Error al registrar el pago directo: {str(e)}"
+        error_msg = f"❌ Error al registrar el pago directo: {str(e)}"
+        print(f"❌ {error_msg}")
+        return error_msg
 
 
 @tool
@@ -902,7 +910,9 @@ def agregar_detalle_orden_venta(
         return f"✅ Detalle agregado exitosamente a la orden {id_sales_orders}.\n📦 Producto: {producto[0]}\n📊 Cantidad: {quantity}\n💰 Precio unitario: {unit_price}\n💵 Subtotal: {subtotal}\n🆔 ID del detalle: {id_sales_order_detail}"
 
     except Exception as e:
-        return f"❌ Error al agregar el detalle a la orden: {str(e)}"
+        error_msg = f"❌ Error al agregar el detalle a la orden: {str(e)}"
+        print(f"❌ {error_msg}")
+        return error_msg
 
 
 @tool
@@ -972,7 +982,9 @@ def buscar_producto_por_nombre(nombre_producto: str) -> str:
             return "\n".join(respuesta)
 
     except Exception as e:
-        return f"❌ Error al buscar el producto: {str(e)}"
+        error_msg = f"❌ Error al buscar el producto: {str(e)}"
+        print(f"❌ {error_msg}")
+        return error_msg
 
 
 
