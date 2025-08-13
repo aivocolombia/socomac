@@ -378,7 +378,9 @@ def cuotas_pendientes_por_plan(id_payment_plan: int) -> str:
         return "\n".join(lines)
 
     except Exception as e:
-        return f"❌ Error al consultar cuotas pendientes: {str(e)}"
+        error_msg = f"❌ Error al consultar cuotas pendientes: {str(e)}"
+        print(f"❌ {error_msg}")
+        return error_msg
 
 
 from decimal import Decimal
