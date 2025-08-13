@@ -622,8 +622,11 @@ def registrar_pago(
         cursor.execute("""
             UPDATE payment_installment
             SET pay_amount = COALESCE(pay_amount, 0) + %s
-            WHERE id_payment_installment = %s;
+            WHERE id_payment_installment = %s
+            RETURNING pay_amount;
         """, (amount, id_payment_installment))
+        
+        nuevo_acumulado = cursor.fetchone()[0]
 
         conn.commit()
         conn.close()
@@ -631,7 +634,7 @@ def registrar_pago(
         return (
             f"✅ Pago registrado correctamente.\n"
             f"ID Payment: {id_payment}\n"
-            f"Nuevo acumulado en la cuota: {amount}"
+            f"Nuevo acumulado en la cuota: {nuevo_acumulado}"
         )
 
     except Exception as e:
