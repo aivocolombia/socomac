@@ -22,9 +22,7 @@ from app.core.tools import (
     consultar_productos,
     buscar_producto_por_nombre,
     crear_orden_venta,
-    agregar_detalle_orden_venta,
-    crear_plan_financiamiento,
-    crear_plan_letras
+    agregar_detalle_orden_venta
 )
 import os
 import json
@@ -54,9 +52,7 @@ tools = [
    consultar_productos,
    buscar_producto_por_nombre,
    crear_orden_venta,
-   agregar_detalle_orden_venta,
-   crear_plan_financiamiento,
-   crear_plan_letras
+   agregar_detalle_orden_venta
 ]
 
 
