@@ -1128,9 +1128,9 @@ def crear_nuevo_cliente(
     first_name: str,
     last_name: str,
     email: str,
-    company: str,
     phone: str,
     client_type: str,
+    company: str = "",
     phone_2: str = "",
     city: str = "",
     department: str = "",
@@ -1144,9 +1144,9 @@ def crear_nuevo_cliente(
         first_name (str): Nombre del cliente (obligatorio)
         last_name (str): Apellido del cliente (obligatorio)
         email (str): Correo electrónico del cliente (obligatorio)
-        company (str): Nombre de la empresa (obligatorio)
         phone (str): Número de teléfono principal (obligatorio)
         client_type (str): Tipo de cliente - "Empresa" o "Persona natural" (obligatorio)
+        company (str): Nombre de la empresa (obligatorio solo si client_type es "Empresa")
         phone_2 (str): Número de teléfono secundario (opcional)
         city (str): Ciudad del cliente (obligatorio)
         department (str): Departamento del cliente (obligatorio)
@@ -1165,6 +1165,10 @@ def crear_nuevo_cliente(
         # Validar client_type
         if client_type not in ["Empresa", "Persona natural"]:
             return "❌ Error: El client_type debe ser 'Empresa' o 'Persona natural'."
+        
+        # Validar company según client_type
+        if client_type == "Empresa" and not company:
+            return "❌ Error: Si el tipo de cliente es 'Empresa', el nombre de la empresa es obligatorio."
         
         # Verificar si el cliente ya existe
         conn = get_db_connection()

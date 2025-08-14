@@ -45,7 +45,8 @@ Casos:
      * Si el usuario dice que no está en la lista o que necesita crear uno nuevo:
        - Preguntar: "¿Deseas crear un nuevo cliente?"
                - Si confirma, proceder con la creación del nuevo cliente usando crear_nuevo_cliente()
-        - Solicitar información obligatoria: unique_id, first_name, last_name, email, phone, client_type, company, city, department, address
+        - Solicitar información obligatoria: unique_id, first_name, last_name, email, phone, client_type, city, department, address
+        - Solicitar información condicional: company (solo si client_type es "Empresa")
         - Solicitar información adicional opcional: phone_2
 5. Consultar empresa
    - tool nombre_empresa si envias vacio te devuelve todas las empresas.
@@ -75,11 +76,12 @@ Casos:
           * "¿Cuál es el número de documento del cliente?" (unique_id - obligatorio)
           * "¿Cuál es el nombre del cliente?" (first_name - obligatorio)
           * "¿Cuál es el apellido del cliente?" (last_name - obligatorio)
-          * "¿Cuál es el email del cliente?" (email - obligatorio)
-          * "¿Cuál es el teléfono principal del cliente?" (phone - obligatorio)
-          * "¿Es una empresa o persona natural?" (client_type - obligatorio, debe ser "Empresa" o "Persona natural")
-          * "¿Cuál es el nombre de la empresa?" (company - obligatorio)
-          * "¿En qué ciudad vive?" (city - obligatorio)
+                     * "¿Cuál es el email del cliente?" (email - obligatorio)
+           * "¿Cuál es el teléfono principal del cliente?" (phone - obligatorio)
+           * "¿Es una empresa o persona natural?" (client_type - obligatorio, debe ser "Empresa" o "Persona natural")
+           * Si es "Empresa": "¿Cuál es el nombre de la empresa?" (company - obligatorio para empresas)
+           * Si es "Persona natural": company puede estar vacío
+           * "¿En qué ciudad vive?" (city - obligatorio)
           * "¿En qué departamento vive?" (department - obligatorio)
           * "¿Cuál es la dirección?" (address - obligatorio)
           * Información adicional opcional:
@@ -225,7 +227,8 @@ Casos:
       * Si no se encuentra el cliente en la base de datos:
         - Preguntar: "¿Deseas crear un nuevo cliente?"
         - Si confirma, proceder con la creación del nuevo cliente usando crear_nuevo_cliente()
-        - Solicitar información obligatoria: unique_id, first_name, last_name, email, phone, client_type, company, city, department, address
+        - Solicitar información obligatoria: unique_id, first_name, last_name, email, phone, client_type, city, department, address
+        - Solicitar información condicional: company (solo si client_type es "Empresa")
         - Solicitar información adicional opcional: phone_2
       * HERRAMIENTAS DE BÚSQUEDA:
         * Usar nombre_cliente() para obtener información completa del cliente (inteligente: muestra detalles si hay ≤3 resultados)
@@ -333,7 +336,8 @@ montos_a_favor_por_cliente(id_cliente) → muestra si tiene saldos a favor.
             - Si no se encuentra el cliente en la base de datos:
               * Preguntar: "¿Deseas crear un nuevo cliente?"
               * Si confirma, proceder con la creación del nuevo cliente usando crear_nuevo_cliente()
-              * Solicitar información obligatoria: unique_id, first_name, last_name, email, phone, client_type, company, city, department, address
+              * Solicitar información obligatoria: unique_id, first_name, last_name, email, phone, client_type, city, department, address
+              * Solicitar información condicional: company (solo si client_type es "Empresa")
               * Solicitar información adicional opcional: phone_2
             - Solicitar campos adicionales según método
             - Usar registrar_pago_directo_orden() con id_payment_installment = NULL
