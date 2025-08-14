@@ -26,7 +26,6 @@ def limpiar_memoria(phone: str) -> str:
         return error_msg
 
 
-
 @tool
 def nombre_cliente(nombre: str = "", offset: int = 0, limit: int = 10) -> str:
     """
@@ -382,8 +381,8 @@ def cuotas_pendientes_por_plan(id_payment_plan: int) -> str:
         print(f"❌ {error_msg}")
         return error_msg
 
-
 from decimal import Decimal
+from datetime import datetime, timedelta
 
 @tool
 def consultar_productos(nombre: str = "", offset: int = 0, limit: int = 10) -> str:
@@ -991,4 +990,417 @@ def buscar_producto_por_nombre(nombre_producto: str) -> str:
         return error_msg
 
 
+@tool
+def crear_plan_financiamiento(
+    id_sales_orders: int,
+    num_installments: int,
+    total_amount: float,
+    start_date: str,
+    frequency: str,
+    notes: str = None,
+    type_payment_plan: str = "Otro plan de financiamiento"
+) -> str:
+    """
+    Crea un plan de financiamiento para una orden de venta específica.
+    
+    Args:
+        id_sales_orders (int): ID de la orden de venta
+        num_installments (int): Número de cuotas
+        total_amount (float): Monto total del plan
+        start_date (str): Fecha de inicio en formato YYYY-MM-DD
+        frequency (str): Frecuencia de pago (Mensual, Quincenal, Semanal, etc.)
+        notes (str, optional): Notas adicionales del plan
+        type_payment_plan (str, optional): Tipo de plan de pago. Default "Otro plan de financiamiento"
+    
+    Returns:
+        str: ID del plan creado o mensaje de error
+    """
+    try:
+        if not isinstance(id_sales_orders, int) or id_sales_orders <= 0:
+            return "❌ El ID de la orden de venta debe ser un número entero positivo."
+        
+        if not isinstance(num_installments, int) or num_installments <= 0:
+            return "❌ El número de cuotas debe ser un número entero positivo."
+        
+        if not isinstance(total_amount, (int, float)) or total_amount <= 0:
+            return "❌ El monto total debe ser un número mayor que 0."
+        
+        # Validar formato de fecha
+        try:
+            datetime.strptime(start_date, '%Y-%m-%d')
+        except ValueError:
+            return "❌ La fecha debe estar en formato YYYY-MM-DD."
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Verificar que la orden de venta existe
+        cursor.execute("SELECT id_sales_orders FROM sales_orders WHERE id_sales_orders = %s", (id_sales_orders,))
+        if not cursor.fetchone():
+            conn.close()
+            return f"❌ No se encontró la orden de venta con ID {id_sales_orders}."
+        
+        # Calcular monto por cuota
+        amount_per_installment = total_amount / num_installments
+        
+        # Insertar el plan de financiamiento
+        query = """
+            INSERT INTO payment_plan (
+                id_sales_orders,
+                num_installments,
+                total_amount,
+                start_date,
+                frequency,
+                notes,
+                pending_amount,
+                type_payment_plan,
+                status
+            )
+            VALUES (
+                %s, %s, %s, %s, %s, %s, %s, %s, 'Pendiente'
+            )
+            RETURNING id_payment_plan;
+        """
+        
+        pending_amount = total_amount * (-1)  # Monto pendiente negativo
+        
+        cursor.execute(query, (
+            id_sales_orders, num_installments, total_amount, start_date, 
+            frequency, notes, pending_amount, type_payment_plan
+        ))
+        
+        id_payment_plan = cursor.fetchone()[0]
+        
+        # Crear las cuotas automáticamente
+        start_date_obj = datetime.strptime(start_date, '%Y-%m-%d')
+        
+        for i in range(1, num_installments + 1):
+            # Calcular fecha de vencimiento según la frecuencia
+            if frequency.lower() == "mensual":
+                due_date = start_date_obj + timedelta(days=30 * i)
+            elif frequency.lower() == "quincenal":
+                due_date = start_date_obj + timedelta(days=15 * i)
+            elif frequency.lower() == "semanal":
+                due_date = start_date_obj + timedelta(weeks=i)
+            else:
+                # Por defecto, mensual
+                due_date = start_date_obj + timedelta(days=30 * i)
+            
+            # Insertar la cuota
+            cursor.execute("""
+                INSERT INTO payment_installment (
+                    id_payment_plan,
+                    installment_number,
+                    amount,
+                    due_date,
+                    status
+                )
+                VALUES (
+                    %s, %s, %s, %s, 'Pendiente'
+                );
+            """, (id_payment_plan, i, amount_per_installment, due_date.strftime('%Y-%m-%d')))
+        
+        conn.commit()
+        conn.close()
+        
+        return (
+            f"✅ Plan de financiamiento creado exitosamente.\n"
+            f"🆔 ID del plan: {id_payment_plan}\n"
+            f"🛒 Orden de venta: {id_sales_orders}\n"
+            f"📊 Número de cuotas: {num_installments}\n"
+            f"💰 Monto total: {total_amount}\n"
+            f"💵 Monto por cuota: {amount_per_installment:.2f}\n"
+            f"📅 Fecha de inicio: {start_date}\n"
+            f"🔄 Frecuencia: {frequency}\n"
+            f"📝 Tipo: {type_payment_plan}\n"
+            f"📋 Estado: Pendiente"
+        )
 
+    except Exception as e:
+        error_msg = f"❌ Error al crear el plan de financiamiento: {str(e)}"
+        print(f"❌ {error_msg}")
+        return error_msg
+
+
+@tool
+def crear_nuevo_cliente(
+    unique_id: str,
+    first_name: str,
+    last_name: str,
+    email: str = "",
+    company: str = "",
+    phone: str = "",
+    phone_2: str = "",
+    city: str = "",
+    department: str = "",
+    address: str = ""
+) -> str:
+    """
+    Crea un nuevo cliente en la base de datos con la información proporcionada.
+    
+    Args:
+        unique_id (str): Número de documento único del cliente (obligatorio)
+        first_name (str): Nombre del cliente (obligatorio)
+        last_name (str): Apellido del cliente (obligatorio)
+        email (str): Correo electrónico del cliente (opcional)
+        company (str): Nombre de la empresa (opcional, si es empresa)
+        phone (str): Número de teléfono principal (opcional)
+        phone_2 (str): Número de teléfono secundario (opcional)
+        city (str): Ciudad del cliente (opcional)
+        department (str): Departamento del cliente (opcional)
+        address (str): Dirección del cliente (opcional)
+    
+    Returns:
+        str: Confirmación de la creación del cliente con su ID asignado
+    """
+    try:
+        print(f"👤 Creando nuevo cliente: {first_name} {last_name}")
+        
+        # Validar campos obligatorios
+        if not unique_id or not first_name or not last_name:
+            return "❌ Error: Los campos unique_id, first_name y last_name son obligatorios."
+        
+        # Verificar si el cliente ya existe
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Verificar si ya existe un cliente con el mismo unique_id
+        cursor.execute("""
+            SELECT id_client, full_name FROM public.clients 
+            WHERE unique_id = %s
+        """, (unique_id,))
+        
+        existing_client = cursor.fetchone()
+        if existing_client:
+            conn.close()
+            return f"❌ Ya existe un cliente con el documento {unique_id}: {existing_client[1]} (ID: {existing_client[0]})"
+        
+        # Determinar el tipo de cliente
+        client_type = "Empresa" if company else "Persona natural"
+        
+        # Construir el nombre completo
+        full_name = f"{first_name} {last_name}".strip()
+        
+        # Insertar el nuevo cliente
+        query = """
+            INSERT INTO clients (
+                unique_id,
+                client_type,
+                email,
+                full_name,
+                first_name,
+                last_name,
+                company,
+                phone,
+                phone_2,
+                city,
+                deparment,
+                address
+            )
+            VALUES (
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+            )
+            RETURNING id_client;
+        """
+        
+        cursor.execute(query, (
+            unique_id,
+            client_type,
+            email,
+            full_name,
+            first_name,
+            last_name,
+            company,
+            phone,
+            phone_2,
+            city,
+            department,
+            address
+        ))
+        
+        id_client = cursor.fetchone()[0]
+        conn.commit()
+        conn.close()
+        
+        # Construir mensaje de confirmación
+        confirmacion = f"✅ Cliente creado exitosamente.\n"
+        confirmacion += f"🆔 ID del cliente: {id_client}\n"
+        confirmacion += f"👤 Nombre: {full_name}\n"
+        confirmacion += f"📄 Documento: {unique_id}\n"
+        confirmacion += f"🏷️ Tipo: {client_type}\n"
+        
+        if company:
+            confirmacion += f"🏢 Empresa: {company}\n"
+        if email:
+            confirmacion += f"📧 Email: {email}\n"
+        if phone:
+            confirmacion += f"📞 Teléfono: {phone}\n"
+        if phone_2:
+            confirmacion += f"📱 Teléfono 2: {phone_2}\n"
+        if city:
+            confirmacion += f"🏙️ Ciudad: {city}\n"
+        if department:
+            confirmacion += f"🗺️ Departamento: {department}\n"
+        if address:
+            confirmacion += f"📍 Dirección: {address}\n"
+        
+        print(f"✅ Cliente creado con ID: {id_client}")
+        return confirmacion
+        
+    except Exception as e:
+        error_msg = f"❌ Error al crear el cliente: {str(e)}"
+        print(f"❌ {error_msg}")
+        return error_msg
+
+
+@tool
+def crear_plan_letras(
+    id_sales_orders: int,
+    num_installments: int,
+    total_amount: float,
+    start_date: str,
+    frequency: str,
+    letra_number: int,
+    last_date: str,
+    notes: str = None
+) -> str:
+    """
+    Crea un plan de financiamiento tipo "Letras" para una orden de venta específica.
+    Crea el payment_plan, los payment_installment y la letra correspondiente.
+    
+    Args:
+        id_sales_orders (int): ID de la orden de venta
+        num_installments (int): Número de letras
+        total_amount (float): Monto total del plan
+        start_date (str): Fecha de inicio en formato YYYY-MM-DD
+        frequency (str): Frecuencia de pago (Mensual, Quincenal, Semanal, etc.)
+        notes (str, optional): Notas adicionales del plan
+    
+    Returns:
+        str: ID del plan creado o mensaje de error
+    """
+    try:
+        if not isinstance(id_sales_orders, int) or id_sales_orders <= 0:
+            return "❌ El ID de la orden de venta debe ser un número entero positivo."
+        
+        if not isinstance(num_installments, int) or num_installments <= 0:
+            return "❌ El número de letras debe ser un número entero positivo."
+        
+        if not isinstance(total_amount, (int, float)) or total_amount <= 0:
+            return "❌ El monto total debe ser un número mayor que 0."
+        
+        if not isinstance(letra_number, int) or letra_number <= 0:
+            return "❌ El número de letra debe ser un número entero positivo."
+        
+        # Validar formato de fechas
+        try:
+            datetime.strptime(start_date, '%Y-%m-%d')
+            datetime.strptime(last_date, '%Y-%m-%d')
+        except ValueError:
+            return "❌ Las fechas deben estar en formato YYYY-MM-DD."
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Verificar que la orden de venta existe
+        cursor.execute("SELECT id_sales_orders FROM sales_orders WHERE id_sales_orders = %s", (id_sales_orders,))
+        if not cursor.fetchone():
+            conn.close()
+            return f"❌ No se encontró la orden de venta con ID {id_sales_orders}."
+        
+        # Calcular monto por letra
+        amount_per_installment = total_amount / num_installments
+        
+        # Insertar el plan de financiamiento tipo "Letra"
+        query = """
+            INSERT INTO payment_plan (
+                id_sales_orders,
+                num_installments,
+                total_amount,
+                start_date,
+                frequency,
+                notes,
+                pending_amount,
+                type_payment_plan,
+                status
+            )
+            VALUES (
+                %s, %s, %s, %s, %s, %s, %s, %s, 'Pendiente'
+            )
+            RETURNING id_payment_plan;
+        """
+        
+        pending_amount = total_amount * (-1)  # Monto pendiente negativo
+        type_payment_plan = "Letras"
+        
+        cursor.execute(query, (
+            id_sales_orders, num_installments, total_amount, start_date, 
+            frequency, notes, pending_amount, type_payment_plan
+        ))
+        
+        id_payment_plan = cursor.fetchone()[0]
+        
+        # Crear las cuotas automáticamente
+        start_date_obj = datetime.strptime(start_date, '%Y-%m-%d')
+        
+        for i in range(1, num_installments + 1):
+            # Calcular fecha de vencimiento según la frecuencia
+            if frequency.lower() == "mensual":
+                due_date = start_date_obj + timedelta(days=30 * i)
+            elif frequency.lower() == "quincenal":
+                due_date = start_date_obj + timedelta(days=15 * i)
+            elif frequency.lower() == "semanal":
+                due_date = start_date_obj + timedelta(weeks=i)
+            else:
+                # Por defecto, mensual
+                due_date = start_date_obj + timedelta(days=30 * i)
+            
+            # Insertar la cuota
+            cursor.execute("""
+                INSERT INTO payment_installment (
+                    id_payment_plan,
+                    installment_number,
+                    amount,
+                    due_date,
+                    status
+                )
+                VALUES (
+                    %s, %s, %s, %s, 'Pendiente'
+                );
+            """, (id_payment_plan, i, amount_per_installment, due_date.strftime('%Y-%m-%d')))
+        
+        # Crear la letra
+        cursor.execute("""
+            INSERT INTO letras (
+                id_payment_plan,
+                letra_number,
+                last_date,
+                status
+            )
+            VALUES (
+                %s, %s, %s, 'Pendiente'
+            );
+        """, (id_payment_plan, letra_number, last_date))
+        
+        conn.commit()
+        conn.close()
+        
+        return (
+            f"✅ Plan de letras creado exitosamente.\n"
+            f"🆔 ID del plan: {id_payment_plan}\n"
+            f"🛒 Orden de venta: {id_sales_orders}\n"
+            f"📊 Número de letras: {num_installments}\n"
+            f"💰 Monto total: {total_amount}\n"
+            f"💵 Monto por letra: {amount_per_installment:.2f}\n"
+            f"📅 Fecha de inicio: {start_date}\n"
+            f"🔄 Frecuencia: {frequency}\n"
+            f"📝 Tipo: Letra\n"
+            f"📋 Estado: Pendiente\n"
+            f"🔢 Número de letra: {letra_number}\n"
+            f"📅 Última fecha de pago: {last_date}"
+        )
+        
+    except Exception as e:
+        error_msg = f"❌ Error al crear el plan de letras: {str(e)}"
+        print(f"❌ {error_msg}")
+        return error_msg
