@@ -1127,9 +1127,10 @@ def crear_nuevo_cliente(
     unique_id: str,
     first_name: str,
     last_name: str,
-    email: str = "",
-    company: str = "",
-    phone: str = "",
+    email: str,
+    company: str,
+    phone: str,
+    client_type: str,
     phone_2: str = "",
     city: str = "",
     department: str = "",
@@ -1142,13 +1143,14 @@ def crear_nuevo_cliente(
         unique_id (str): Número de documento único del cliente (obligatorio)
         first_name (str): Nombre del cliente (obligatorio)
         last_name (str): Apellido del cliente (obligatorio)
-        email (str): Correo electrónico del cliente (opcional)
-        company (str): Nombre de la empresa (opcional, si es empresa)
-        phone (str): Número de teléfono principal (opcional)
+        email (str): Correo electrónico del cliente (obligatorio)
+        company (str): Nombre de la empresa (obligatorio)
+        phone (str): Número de teléfono principal (obligatorio)
+        client_type (str): Tipo de cliente - "Empresa" o "Persona natural" (obligatorio)
         phone_2 (str): Número de teléfono secundario (opcional)
-        city (str): Ciudad del cliente (opcional)
-        department (str): Departamento del cliente (opcional)
-        address (str): Dirección del cliente (opcional)
+        city (str): Ciudad del cliente (obligatorio)
+        department (str): Departamento del cliente (obligatorio)
+        address (str): Dirección del cliente (obligatorio)
     
     Returns:
         str: Confirmación de la creación del cliente con su ID asignado
@@ -1157,8 +1159,12 @@ def crear_nuevo_cliente(
         print(f"👤 Creando nuevo cliente: {first_name} {last_name}")
         
         # Validar campos obligatorios
-        if not unique_id or not first_name or not last_name:
-            return "❌ Error: Los campos unique_id, first_name y last_name son obligatorios."
+        if not unique_id or not first_name or not last_name or not email or not phone or not client_type or not city or not department or not address:
+            return "❌ Error: Los campos unique_id, first_name, last_name, email, phone, client_type, city, department y address son obligatorios."
+        
+        # Validar client_type
+        if client_type not in ["Empresa", "Persona natural"]:
+            return "❌ Error: El client_type debe ser 'Empresa' o 'Persona natural'."
         
         # Verificar si el cliente ya existe
         conn = get_db_connection()
@@ -1175,8 +1181,7 @@ def crear_nuevo_cliente(
             conn.close()
             return f"❌ Ya existe un cliente con el documento {unique_id}: {existing_client[1]} (ID: {existing_client[0]})"
         
-        # Determinar el tipo de cliente
-        client_type = "Empresa" if company else "Persona natural"
+        # Usar el client_type proporcionado por el usuario
         
         # Construir el nombre completo
         full_name = f"{first_name} {last_name}".strip()
