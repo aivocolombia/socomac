@@ -1123,6 +1123,137 @@ def crear_plan_financiamiento(
 
 
 @tool
+def crear_nuevo_cliente(
+    unique_id: str,
+    first_name: str,
+    last_name: str,
+    email: str = "",
+    company: str = "",
+    phone: str = "",
+    phone_2: str = "",
+    city: str = "",
+    department: str = "",
+    address: str = ""
+) -> str:
+    """
+    Crea un nuevo cliente en la base de datos con la información proporcionada.
+    
+    Args:
+        unique_id (str): Número de documento único del cliente (obligatorio)
+        first_name (str): Nombre del cliente (obligatorio)
+        last_name (str): Apellido del cliente (obligatorio)
+        email (str): Correo electrónico del cliente (opcional)
+        company (str): Nombre de la empresa (opcional, si es empresa)
+        phone (str): Número de teléfono principal (opcional)
+        phone_2 (str): Número de teléfono secundario (opcional)
+        city (str): Ciudad del cliente (opcional)
+        department (str): Departamento del cliente (opcional)
+        address (str): Dirección del cliente (opcional)
+    
+    Returns:
+        str: Confirmación de la creación del cliente con su ID asignado
+    """
+    try:
+        print(f"👤 Creando nuevo cliente: {first_name} {last_name}")
+        
+        # Validar campos obligatorios
+        if not unique_id or not first_name or not last_name:
+            return "❌ Error: Los campos unique_id, first_name y last_name son obligatorios."
+        
+        # Verificar si el cliente ya existe
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Verificar si ya existe un cliente con el mismo unique_id
+        cursor.execute("""
+            SELECT id_client, full_name FROM public.clients 
+            WHERE unique_id = %s
+        """, (unique_id,))
+        
+        existing_client = cursor.fetchone()
+        if existing_client:
+            conn.close()
+            return f"❌ Ya existe un cliente con el documento {unique_id}: {existing_client[1]} (ID: {existing_client[0]})"
+        
+        # Determinar el tipo de cliente
+        client_type = "Empresa" if company else "Persona natural"
+        
+        # Construir el nombre completo
+        full_name = f"{first_name} {last_name}".strip()
+        
+        # Insertar el nuevo cliente
+        query = """
+            INSERT INTO clients (
+                unique_id,
+                client_type,
+                email,
+                full_name,
+                first_name,
+                last_name,
+                company,
+                phone,
+                phone_2,
+                city,
+                deparment,
+                address
+            )
+            VALUES (
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+            )
+            RETURNING id_client;
+        """
+        
+        cursor.execute(query, (
+            unique_id,
+            client_type,
+            email,
+            full_name,
+            first_name,
+            last_name,
+            company,
+            phone,
+            phone_2,
+            city,
+            department,
+            address
+        ))
+        
+        id_client = cursor.fetchone()[0]
+        conn.commit()
+        conn.close()
+        
+        # Construir mensaje de confirmación
+        confirmacion = f"✅ Cliente creado exitosamente.\n"
+        confirmacion += f"🆔 ID del cliente: {id_client}\n"
+        confirmacion += f"👤 Nombre: {full_name}\n"
+        confirmacion += f"📄 Documento: {unique_id}\n"
+        confirmacion += f"🏷️ Tipo: {client_type}\n"
+        
+        if company:
+            confirmacion += f"🏢 Empresa: {company}\n"
+        if email:
+            confirmacion += f"📧 Email: {email}\n"
+        if phone:
+            confirmacion += f"📞 Teléfono: {phone}\n"
+        if phone_2:
+            confirmacion += f"📱 Teléfono 2: {phone_2}\n"
+        if city:
+            confirmacion += f"🏙️ Ciudad: {city}\n"
+        if department:
+            confirmacion += f"🗺️ Departamento: {department}\n"
+        if address:
+            confirmacion += f"📍 Dirección: {address}\n"
+        
+        print(f"✅ Cliente creado con ID: {id_client}")
+        return confirmacion
+        
+    except Exception as e:
+        error_msg = f"❌ Error al crear el cliente: {str(e)}"
+        print(f"❌ {error_msg}")
+        return error_msg
+
+
+@tool
 def crear_plan_letras(
     id_sales_orders: int,
     num_installments: int,
