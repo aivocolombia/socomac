@@ -1405,3 +1405,171 @@ def crear_plan_letras(
         error_msg = f"❌ Error al crear el plan de letras: {str(e)}"
         print(f"❌ {error_msg}")
         return error_msg
+
+
+@tool
+def consultar_detalles_ordenes_cliente(id_client: int) -> str:
+    """
+    Consulta todos los detalles de órdenes de venta de un cliente específico, mostrando información completa
+    incluyendo productos, cantidades, precios y estado de devoluciones.
+    
+    Args:
+        id_client (int): ID del cliente
+        
+    Returns:
+        str: Lista de detalles de órdenes con información completa
+    """
+    try:
+        if not isinstance(id_client, int) or id_client <= 0:
+            return "❌ El ID del cliente debe ser un número entero positivo."
+        
+        print(f"🔍 Consultando detalles de órdenes para cliente: {id_client}")
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Consultar detalles de órdenes del cliente
+        query = """
+            SELECT 
+                sod.id_sales_order_detail,
+                sod.id_sales_orders,
+                sod.id_product,
+                sod.quantity,
+                sod.unit_price,
+                sod.subtotal,
+                COALESCE(sod.devolucion, 'normal') as estado_devolucion,
+                p.name_product,
+                p.description,
+                c.full_name,
+                so.order_date,
+                so.total as total_orden
+            FROM sales_order_details sod
+            JOIN products p ON sod.id_product = p.id_product
+            JOIN sales_orders so ON sod.id_sales_orders = so.id_sales_orders
+            JOIN clients c ON so.id_client = c.id_client
+            WHERE so.id_client = %s
+            ORDER BY so.order_date DESC, sod.id_sales_order_detail DESC
+        """
+        
+        cursor.execute(query, (id_client,))
+        detalles = cursor.fetchall()
+        conn.close()
+        
+        if not detalles:
+            return f"❌ No se encontraron detalles de órdenes para el cliente con ID {id_client}."
+        
+        # Construir respuesta
+        respuesta = [f"📋 Detalles de órdenes para cliente: {detalles[0][9]} (ID: {id_client})"]
+        respuesta.append("=" * 80)
+        
+        for detalle in detalles:
+            id_detail, id_order, id_product, quantity, unit_price, subtotal, estado_devolucion, product_name, description, client_name, order_date, total_orden = detalle
+            
+            # Determinar emoji según estado de devolución
+            estado_emoji = "🔄" if estado_devolucion == 'devolucion' else "✅"
+            estado_texto = "DEVUELTO" if estado_devolucion == 'devolucion' else "NORMAL"
+            
+            respuesta.append(f"{estado_emoji} Detalle ID: {id_detail}")
+            respuesta.append(f"   🛒 Orden: {id_order} | 📅 Fecha: {order_date}")
+            respuesta.append(f"   📦 Producto: {product_name} (ID: {id_product})")
+            respuesta.append(f"   📝 Descripción: {description}")
+            respuesta.append(f"   📊 Cantidad: {quantity} | 💰 Precio unitario: {unit_price}")
+            respuesta.append(f"   💵 Subtotal: {subtotal} | 🏷️ Estado: {estado_texto}")
+            respuesta.append("-" * 60)
+        
+        respuesta.append(f"\n📊 Total de detalles encontrados: {len(detalles)}")
+        
+        print(f"✅ Encontrados {len(detalles)} detalles de órdenes para cliente {id_client}")
+        return "\n".join(respuesta)
+        
+    except Exception as e:
+        error_msg = f"❌ Error al consultar detalles de órdenes: {str(e)}"
+        print(f"❌ {error_msg}")
+        return error_msg
+
+
+@tool
+def procesar_devolucion(id_sales_order_detail: int) -> str:
+    """
+    Procesa una devolución marcando un detalle específico de una orden de venta como devuelto.
+    
+    Args:
+        id_sales_order_detail (int): ID del detalle de la orden de venta a devolver
+        
+    Returns:
+        str: Confirmación de la devolución procesada o mensaje de error
+    """
+    try:
+        if not isinstance(id_sales_order_detail, int) or id_sales_order_detail <= 0:
+            return "❌ El ID del detalle de la orden debe ser un número entero positivo."
+        
+        print(f"🔄 Procesando devolución para detalle de orden: {id_sales_order_detail}")
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Verificar que el detalle existe y obtener información
+        cursor.execute("""
+            SELECT 
+                sod.id_sales_order_detail,
+                sod.id_sales_orders,
+                sod.id_product,
+                sod.quantity,
+                sod.unit_price,
+                sod.subtotal,
+                p.name_product,
+                c.full_name,
+                c.id_client
+            FROM sales_order_details sod
+            JOIN products p ON sod.id_product = p.id_product
+            JOIN sales_orders so ON sod.id_sales_orders = so.id_sales_orders
+            JOIN clients c ON so.id_client = c.id_client
+            WHERE sod.id_sales_order_detail = %s
+        """, (id_sales_order_detail,))
+        
+        detalle = cursor.fetchone()
+        if not detalle:
+            conn.close()
+            return f"❌ No se encontró el detalle de orden con ID {id_sales_order_detail}."
+        
+        # Verificar si ya está marcado como devolución
+        cursor.execute("""
+            SELECT devolucion FROM sales_order_details 
+            WHERE id_sales_order_detail = %s
+        """, (id_sales_order_detail,))
+        
+        estado_actual = cursor.fetchone()[0]
+        if estado_actual == 'devolucion':
+            conn.close()
+            return f"❌ El detalle {id_sales_order_detail} ya está marcado como devolución."
+        
+        # Procesar la devolución
+        cursor.execute("""
+            UPDATE sales_order_details
+            SET devolucion = 'devolucion'
+            WHERE id_sales_order_detail = %s
+        """, (id_sales_order_detail,))
+        
+        conn.commit()
+        conn.close()
+        
+        # Construir mensaje de confirmación
+        id_detail, id_order, id_product, quantity, unit_price, subtotal, product_name, client_name, id_client = detalle
+        
+        confirmacion = f"✅ Devolución procesada exitosamente.\n"
+        confirmacion += f"🆔 ID del detalle: {id_detail}\n"
+        confirmacion += f"🛒 Orden de venta: {id_order}\n"
+        confirmacion += f"👤 Cliente: {client_name} (ID: {id_client})\n"
+        confirmacion += f"📦 Producto: {product_name} (ID: {id_product})\n"
+        confirmacion += f"📊 Cantidad devuelta: {quantity}\n"
+        confirmacion += f"💰 Precio unitario: {unit_price}\n"
+        confirmacion += f"💵 Subtotal devuelto: {subtotal}\n"
+        confirmacion += f"🔄 Estado: Devolución procesada"
+        
+        print(f"✅ Devolución procesada para detalle {id_sales_order_detail}")
+        return confirmacion
+        
+    except Exception as e:
+        error_msg = f"❌ Error al procesar la devolución: {str(e)}"
+        print(f"❌ {error_msg}")
+        return error_msg

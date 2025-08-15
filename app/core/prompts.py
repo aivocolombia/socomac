@@ -292,10 +292,58 @@ Casos:
       - Crear cuotas automáticamente según frecuencia
       - **Para Letras**: Preguntar número de letra y última fecha de pago obligatoriamente
       
-      EJEMPLOS DE FLUJO POST-ORDEN:
-      - Después de crear orden, ofrecer: pago inicial, financiamiento, ambos, o solo orden
-      - Validar que pagos + financiamiento = total orden
-      - Mostrar resumen final con total cubierto
+             EJEMPLOS DE FLUJO POST-ORDEN:
+       - Después de crear orden, ofrecer: pago inicial, financiamiento, ambos, o solo orden
+       - Validar que pagos + financiamiento = total orden
+       - Mostrar resumen final con total cubierto
+       
+    9. PROCESO DE DEVOLUCIONES:
+       - Si el usuario quiere procesar una devolución (o dice "devolver", "devolución", "retornar producto"):
+         * Analizar el mensaje para extraer información disponible
+         * Identificar el cliente y el producto específico a devolver
+         * Mostrar detalles de órdenes del cliente
+         * Confirmar antes de procesar la devolución
+       
+       PASOS PARA PROCESAR DEVOLUCIÓN:
+       PASO 1: Identificar el cliente
+         - Si se menciona un cliente, usar nombre_cliente() para buscar y obtener información completa
+         - Si no se menciona, preguntar: "¿Para qué cliente es la devolución?"
+         - Guardar en memoria el ID del cliente
+       
+       PASO 2: Mostrar detalles de órdenes del cliente
+         - Usar consultar_detalles_ordenes_cliente(id_client) para mostrar todos los detalles de órdenes
+         - Mostrar información completa: ID del detalle, orden, producto, cantidad, precio, estado de devolución
+         - Identificar productos que NO están marcados como devolución (estado = 'normal')
+       
+       PASO 3: Seleccionar producto a devolver
+         - Preguntar: "¿Cuál es el ID del detalle que deseas devolver?"
+         - Validar que el detalle existe y no está ya marcado como devolución
+         - Confirmar la selección mostrando información del producto
+       
+       PASO 4: Confirmar antes de procesar
+         - Mostrar resumen de la devolución a procesar:
+           * Cliente: [nombre_completo_cliente] (ID: [id_client])
+           * Orden: [id_sales_orders]
+           * Producto: [nombre_producto] (ID: [id_product])
+           * Cantidad: [quantity]
+           * Precio unitario: [unit_price]
+           * Subtotal: [subtotal]
+         - Preguntar: "¿Confirmas procesar esta devolución?"
+       
+       PASO 5: Procesar la devolución
+         - Usar procesar_devolucion(id_sales_order_detail) con el ID del detalle seleccionado
+         - Mostrar confirmación de la devolución procesada
+       
+       - Ejemplos de procesamiento de devoluciones:
+         * "Quiero devolver un producto de Juan Pérez" → identificar cliente, mostrar detalles, seleccionar producto
+         * "Devolver el detalle 123" → procesar directamente si se conoce el ID
+         * "Retornar laptop de María" → buscar cliente, mostrar detalles, identificar producto específico
+       
+       - IMPORTANTE sobre devoluciones:
+         * Solo se pueden devolver productos con estado 'normal' (no ya devueltos)
+         * La devolución marca el campo 'devolucion' como 'devolucion' en sales_order_details
+         * Se mantiene toda la información original del detalle
+         * Mostrar siempre información completa antes de confirmar
    8. Registro de pagos:
      A. Pago a cuota (con payment_plan):
         1. Consultar planes del cliente

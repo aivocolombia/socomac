@@ -25,7 +25,9 @@ from app.core.tools import (
     agregar_detalle_orden_venta,
     crear_plan_financiamiento,
     crear_plan_letras,
-    crear_nuevo_cliente
+    crear_nuevo_cliente,
+    consultar_detalles_ordenes_cliente,
+    procesar_devolucion
 )
 import os
 import json
@@ -58,7 +60,9 @@ tools = [
    agregar_detalle_orden_venta,
    crear_plan_financiamiento,
    crear_plan_letras,
-   crear_nuevo_cliente
+   crear_nuevo_cliente,
+   consultar_detalles_ordenes_cliente,
+   procesar_devolucion
 ]
 
 
