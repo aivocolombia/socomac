@@ -9,13 +9,9 @@ from app.db.mongo import MongoChatMessageHistory
 from langchain.prompts import MessagesPlaceholder
 from app.core.prompts import build_system_prompt
 from app.core.tools import (
-    nombre_cliente,
+    validar_cliente,
     limpiar_memoria,
-    nombre_empresa,
-    planes_pago_pendientes_por_cliente,
-    montos_a_favor_por_cliente,
-    cuotas_pendientes_por_plan,
-    registrar_pago
+    insertar_cliente
 )
 import os
 import json
@@ -33,12 +29,8 @@ llm = ChatOpenAI(
 
 tools = [
    limpiar_memoria,
-   nombre_empresa,
-   nombre_cliente,
-   planes_pago_pendientes_por_cliente,
-   montos_a_favor_por_cliente,
-   cuotas_pendientes_por_plan,
-   registrar_pago
+   validar_cliente,
+   insertar_cliente
 ]
 
 

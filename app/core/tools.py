@@ -25,425 +25,76 @@ def limpiar_memoria(phone: str) -> str:
         print(f"❌ {error_msg}")
         return error_msg
 
-
-
 @tool
-def nombre_cliente(nombre: str = "", offset: int = 0, limit: int = 10) -> str:
+def validar_cliente(telefono: str) -> str:
     """
-    Devuelve una lista de clientes filtrados por nombre (opcional) con paginación.
-
+    Valida si un cliente existe en la tabla public.clientes usando el teléfono.
+    
     Args:
-        nombre (str): Nombre o parte del nombre del cliente a buscar. Puede estar vacío para traer todos.
-        offset (int): Posición inicial de los resultados (para paginación).
-        limit (int): Número máximo de resultados a devolver.
+        telefono (str): Teléfono del cliente a buscar.
 
     Returns:
-        str: Lista de clientes encontrados con su ID y nombre.
+        str: Información del cliente si existe o mensaje de no encontrado.
     """
     try:
-        print(f"🔍 Buscando clientes con nombre: '{nombre}'")
         conn = get_db_connection()
-        cursor = conn.cursor()
+        cur = conn.cursor()
 
-        query = """
-            SELECT DISTINCT
-                c.id_client AS id,
-                c.full_name AS nombre
-            FROM public.clients c
-            WHERE COALESCE(NULLIF(c.full_name, ''), '') <> ''
-              AND c.full_name ILIKE %s
-            ORDER BY nombre
-            OFFSET %s
-            LIMIT %s
-        """
-        
-        patron_busqueda = f"%{nombre}%" if nombre else "%%"
-
-        cursor.execute(query, (patron_busqueda, offset, limit))
-        resultados = cursor.fetchall()
+        cur.execute("""
+            SELECT id, nombre, telefono, direccion, created_at
+            FROM public.clientes
+            WHERE telefono = %s
+            LIMIT 1;
+        """, (telefono,))
+        cliente = cur.fetchone()
         conn.close()
 
-        if not resultados:
-            return "No se encontraron clientes con los criterios especificados."
+        if cliente:
+            return (f"🆔 ID: {cliente[0]} | 👤 {cliente[1]} | 📱 {cliente[2]} "
+                    f"| 📍 {cliente[3] or 'N/A'} | 📅 Creado: {cliente[4]}")
+        else:
+            return f"❌ No se encontró cliente con teléfono {telefono}."
 
-        respuesta = []
-        for id_cliente, nombre_cliente in resultados:
-            respuesta.append(f"🆔 ID: {id_cliente} | 👤 Nombre: {nombre_cliente}")
-
-        print(f"✅ Encontrados {len(resultados)} clientes")
-        return "\n".join(respuesta)
-        
     except Exception as e:
-        error_msg = f"Error al consultar clientes: {str(e)}"
-        print(f"❌ {error_msg}")
-        return f"Error al consultar la base de datos: {str(e)}"
+        return f"❌ Error al validar cliente: {str(e)}"
 
 
 @tool
-def nombre_empresa(nombre: str = "", offset: int = 0, limit: int = 10) -> str:
+def insertar_cliente(nombre: str, telefono: str, direccion: str = "") -> str:
     """
-    Devuelve empresas (clients.company) filtradas por nombre con paginación.
-
+    Inserta un cliente en la tabla public.clientes si no existe (usando el teléfono como referencia).
+    
     Args:
-        nombre (str): Parte del nombre de la empresa a buscar. Vacío = todas.
-        offset (int): Desplazamiento inicial (paginación).
-        limit (int): Cantidad de registros a devolver.
+        nombre (str): Nombre del cliente.
+        telefono (str): Teléfono del cliente (único).
+        direccion (str, opcional): Dirección del cliente.
 
     Returns:
-        str: Lista de empresas con ID y nombre.
+        str: Mensaje de confirmación o error.
     """
     try:
-        print(f"🏢 Buscando empresas con nombre: '{nombre}'")
-        
-        # (Opcional) límites sanos para evitar abusos
-        if limit <= 0:
-            limit = 10
-        if limit > 100:
-            limit = 100
-        if offset < 0:
-            offset = 0
-
         conn = get_db_connection()
-        cursor = conn.cursor()
+        cur = conn.cursor()
 
-        query = """
-            SELECT DISTINCT
-                c.id_client AS id,
-                c.company   AS nombre
-            FROM public.clients c
-            WHERE COALESCE(NULLIF(c.company, ''), '') <> ''
-              AND c.company ILIKE %s
-            ORDER BY nombre
-            OFFSET %s
-            LIMIT %s
-        """
+        cur.execute("""
+            SELECT id FROM public.clientes WHERE telefono = %s
+        """, (telefono,))
+        existe = cur.fetchone()
 
-        patron = f"%{nombre}%" if nombre else "%%"
+        if existe:
+            conn.close()
+            return f"⚠️ El cliente con teléfono {telefono} ya existe."
 
-        cursor.execute(query, (patron, offset, limit))
-        rows = cursor.fetchall()
-        conn.close()
-
-        if not rows:
-            return "No se encontraron empresas con los criterios especificados."
-
-        lines = [f"🆔 ID: {rid} | 🏢 Empresa: {rnom}" for rid, rnom in rows]
-        print(f"✅ Encontradas {len(rows)} empresas")
-        return "\n".join(lines)
-        
-    except Exception as e:
-        error_msg = f"Error al consultar empresas: {str(e)}"
-        print(f"❌ {error_msg}")
-        return f"Error al consultar la base de datos: {str(e)}"
-
-
-@tool
-def planes_pago_pendientes_por_cliente(id_cliente: int) -> str:
-    """
-    Devuelve los planes de pago con estado 'Pendiente' asociados a un cliente.
-
-    Args:
-        id_cliente (int): ID del cliente.
-
-    Returns:
-        str: Lista de planes con campos clave o mensaje de no encontrados.
-    """
-    try:
-        if not isinstance(id_cliente, int) or id_cliente <= 0:
-            return "El ID de cliente debe ser un número entero positivo."
-
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        query = """
-            SELECT 
-                pp.id_payment_plan,
-                pp.id_sales_orders,
-                pp.num_installments,
-                pp.total_amount,
-                pp.status,
-                pp.pending_amount,
-                pp.type_payment_plan
-            FROM public.payment_plan pp
-            JOIN public.sales_orders so 
-                ON so.id_sales_orders = pp.id_sales_orders
-            WHERE so.id_client = %s
-              AND pp.status = 'Pendiente'
-            ORDER BY pp.created_at DESC;
-        """
-
-        cursor.execute(query, (id_cliente,))
-        rows = cursor.fetchall()
-        conn.close()
-
-        if not rows:
-            return f"No se encontraron planes de pago pendientes para el cliente con ID {id_cliente}."
-
-        # Formato de salida
-        lines = []
-        for rid_plan, rid_order, num_inst, total_amt, status, pending_amt, type_plan in rows:
-            lines.append(
-                f"📋 Plan: {rid_plan} | 🛒 Orden: {rid_order} | "
-                f"Cuotas: {num_inst} | 💰 Total: {total_amt} | "
-                f"Estado: {status} | ⏳ Pendiente: {pending_amt} | "
-                f"Tipo: {type_plan}"
-            )
-
-        return "\n".join(lines)
-
-    except Exception as e:
-        error_msg = f"Error al consultar planes de pago: {str(e)}"
-        print(f"❌ {error_msg}")
-        return f"Error al consultar la base de datos: {str(e)}"
-
-
-@tool
-def montos_a_favor_por_cliente(id_cliente: int) -> str:
-    """
-    Devuelve los planes de pago 'Pagado' con monto pendiente mayor a 0,
-    es decir, montos a favor de un cliente.
-
-    Args:
-        id_cliente (int): ID del cliente.
-
-    Returns:
-        str: Lista de planes con montos a favor o mensaje de no encontrados.
-    """
-    try:
-        if not isinstance(id_cliente, int) or id_cliente <= 0:
-            return "El ID de cliente debe ser un número entero positivo."
-
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        query = """
-            SELECT 
-                pp.id_payment_plan,
-                pp.id_sales_orders,
-                pp.pending_amount
-            FROM public.payment_plan pp
-            JOIN public.sales_orders so 
-                ON so.id_sales_orders = pp.id_sales_orders
-            WHERE so.id_client = %s
-              AND pp.status = 'Pagado'
-              AND pp.pending_amount > 0
-            ORDER BY pp.created_at DESC;
-        """
-
-        cursor.execute(query, (id_cliente,))
-        rows = cursor.fetchall()
-        conn.close()
-
-        if not rows:
-            return f"No se encontraron montos a favor para el cliente con ID {id_cliente}."
-
-        # Formato de salida
-        lines = []
-        for rid_plan, rid_order, pending_amt in rows:
-            lines.append(
-                f"📋 Plan: {rid_plan} | 🛒 Orden: {rid_order} | 💵 Monto a favor: {pending_amt}"
-            )
-
-        return "\n".join(lines)
-
-    except Exception as e:
-        error_msg = f"Error al consultar montos a favor: {str(e)}"
-        print(f"❌ {error_msg}")
-        return f"Error al consultar la base de datos: {str(e)}"
-
-
-@tool
-def cuotas_pendientes_por_plan(id_payment_plan: int) -> str:
-    """
-    Devuelve las cuotas con estado 'Pendiente' de un plan de pago específico.
-
-    Args:
-        id_payment_plan (int): ID del plan de pago.
-
-    Returns:
-        str: Lista de cuotas pendientes con detalles o mensaje de no encontradas.
-    """
-    try:
-        if not isinstance(id_payment_plan, int) or id_payment_plan <= 0:
-            return "El ID del plan de pago debe ser un número entero positivo."
-
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        query = """
-            SELECT 
-                pi.id_payment_installment,
-                pi.installment_number,
-                pi.due_date,
-                pi.amount,
-                pi.pay_amount,
-                pi.status,
-                pi.daysoverdue,
-                pi.early_payment_discount
-            FROM public.payment_installment pi
-            WHERE pi.id_payment_plan = %s
-              AND pi.status = 'Pendiente'
-            ORDER BY pi.installment_number ASC;
-        """
-
-        cursor.execute(query, (id_payment_plan,))
-        rows = cursor.fetchall()
-        conn.close()
-
-        if not rows:
-            return f"No se encontraron cuotas pendientes para el plan {id_payment_plan}."
-
-        # Formateo de salida
-        lines = []
-        for (
-            id_installment, num_installment, due_date, amount, pay_amount,
-            status, days_overdue, early_discount
-        ) in rows:
-            lines.append(
-                f"📌 Cuota #{num_installment} | "
-                f"💰 Total: {amount} | 💵 Pagado: {pay_amount} | "
-                f"📅 Vence: {due_date} | Estado: {status} | "
-                f"Días mora: {days_overdue} | "
-                f"Descuento pronto pago: {early_discount}"
-            )
-
-        return "\n".join(lines)
-
-    except Exception as e:
-        error_msg = f"Error al consultar cuotas pendientes: {str(e)}"
-        print(f"❌ {error_msg}")
-        return f"Error al consultar la base de datos: {str(e)}"
-
-@tool
-def registrar_pago(
-    id_sales_orders: int,
-    id_payment_installment: int,
-    id_client: int,
-    payment_method: str,
-    amount: float,
-    # Campos opcionales comunes
-    notes: str = "",
-    segundo_apellido: str = "",
-    destiny_bank: str = "",
-    pay_amount_actual: float = 0.0,
-    # Campos exclusivos para Transferencia
-    proof_number: str = "",
-    emission_bank: str = "",
-    emission_date: str = "",
-    trans_value: float = 0.0,
-    observations: str = "",
-    # Campos exclusivos para Cheque
-    cheque_number: str = "",
-    bank: str = "",
-    emision_date: str = "",
-    stimate_collection_date: str = "",
-    cheque_value: float = 0.0
-) -> str:
-    """
-    Registra un pago para una cuota y actualiza su valor acumulado.
-
-    **Métodos de pago soportados (payment_method):**
-      - "Efectivo":
-          - Obligatorio: id_sales_orders, id_payment_installment, id_client, amount
-          - Inserta en payments con payment_method='Efectivo', caja_receipt='Yes'
-      - "Transferencia":
-          - Obligatorio: id_sales_orders, id_payment_installment, id_client, amount, proof_number, emission_bank, emission_date, trans_value
-          - Inserta en payments con payment_method='Transferencia', caja_receipt='No'
-          - Inserta en transfers con los datos adicionales
-      - "Cheque":
-          - Obligatorio: id_sales_orders, id_payment_installment, id_client, amount, cheque_number, bank, emision_date, stimate_collection_date, cheque_value
-          - Inserta en payments con payment_method='Cheque', caja_receipt='No'
-          - Inserta en cheques con los datos adicionales
-
-    **Proceso que sigue la tool:**
-      1. Insertar en `payments` con los datos básicos y `payment_date = CURRENT_DATE`.
-      2. Según `payment_method`:
-         - Si es "Transferencia" → insertar en `transfers`.
-         - Si es "Cheque" → insertar en `cheques`.
-      3. Actualizar `payment_installment` sumando `amount` al valor ya registrado en `pay_amount` y fijando `payment_date = CURRENT_DATE`.
-      
-    **Notas para el agente:**
-      - No solicitar campos innecesarios para el método de pago elegido.
-      - Asegurar que `amount > 0`.
-      - `pay_amount_actual` debe enviarse si ya hay pagos previos en la cuota para poder sumar correctamente.
-    """
-    try:
-        if amount <= 0:
-            return "El monto del pago debe ser mayor que 0."
-
-        pm = payment_method.strip().capitalize()
-        if pm not in ["Efectivo", "Transferencia", "Cheque"]:
-            return "Método de pago inválido. Use: Efectivo, Transferencia o Cheque."
-
-        caja_receipt = "Yes" if pm == "Efectivo" else "No"
-
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        # 1) Insert en payments
-        cursor.execute("""
-            INSERT INTO payments (
-              id_sales_orders,
-              id_payment_installment,
-              id_client,
-              payment_method,
-              amount,
-              payment_date,
-              notes,
-              caja_receipt,
-              segundo_apellido,
-              destiny_bank
-            )
-            VALUES (%s, %s, %s, %s, %s, CURRENT_DATE, %s, %s, %s, %s)
-            RETURNING id_payment;
-        """, (
-            id_sales_orders, id_payment_installment, id_client, pm,
-            amount, notes, caja_receipt, segundo_apellido, destiny_bank
-        ))
-        id_payment = cursor.fetchone()[0]
-
-        # 2) Inserts adicionales según método
-        if pm == "Transferencia":
-            cursor.execute("""
-                INSERT INTO transfers (
-                  id_payment,
-                  proof_number,
-                  emission_bank,
-                  emission_date,
-                  trans_value,
-                  observations,
-                  destiny_bank
-                )
-                VALUES (%s, %s, %s, %s, %s, %s, %s);
-            """, (id_payment, proof_number, emission_bank, emission_date, trans_value, observations, destiny_bank))
-
-        elif pm == "Cheque":
-            cursor.execute("""
-                INSERT INTO cheques (
-                  id_payment,
-                  cheque_number,
-                  bank,
-                  emision_date,
-                  stimate_collection_date,
-                  cheque_value,
-                  observations
-                )
-                VALUES (%s, %s, %s, %s, %s, %s, %s);
-            """, (id_payment, cheque_number, bank, emision_date, stimate_collection_date, cheque_value, observations))
-
-        # 3) Update de la cuota
-        nuevo_acumulado = (pay_amount_actual or 0.0) + amount
-        cursor.execute("""
-            UPDATE payment_installment
-            SET pay_amount = %s,
-                payment_date = CURRENT_DATE
-            WHERE id_payment_installment = %s;
-        """, (nuevo_acumulado, id_payment_installment))
-
+        cur.execute("""
+            INSERT INTO public.clientes (nombre, telefono, direccion, updated_at, created_at)
+            VALUES (%s, %s, %s, NOW(), NOW())
+            RETURNING id, nombre, telefono, direccion;
+        """, (nombre, telefono, direccion))
+        nuevo = cur.fetchone()
         conn.commit()
         conn.close()
 
-        return f"✅ Pago registrado correctamente. ID Payment: {id_payment} | Nuevo acumulado: {nuevo_acumulado}"
+        return f"✅ Cliente creado: ID {nuevo[0]} | {nuevo[1]} ({nuevo[2]})"
 
     except Exception as e:
-        return f"❌ Error al registrar el pago: {str(e)}"
+        return f"❌ Error al insertar cliente: {str(e)}"
