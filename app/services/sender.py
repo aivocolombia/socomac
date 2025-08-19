@@ -8,7 +8,7 @@ def send_whatsapp_message(phone: str, message: str, channel_id: str):
     url = f"https://gate.whapi.cloud/messages/text"
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer { }"
+        "Authorization": f"Bearer {WHAPI_API_KEY}"
     }
     payload = {
         "to": phone,
