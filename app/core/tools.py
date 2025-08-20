@@ -1488,69 +1488,6 @@ def consultar_detalles_ordenes_cliente(id_client: int) -> str:
         return error_msg
 
 
-@tool
-def buscar_clasificacion(nombre: str = "", primer_apellido: str = "") -> str:
-    """
-    Busca clasificaciones en la base de datos por nombre y primer apellido.
-    Una clasificación indica si es una venta de producto o servicio.
-
-    Args:
-        nombre (str): Nombre de la clasificación (opcional)
-        primer_apellido (str): Primer apellido de la clasificación (opcional)
-
-    Returns:
-        str: Lista de clasificaciones encontradas con su ID, nombre y primer apellido
-    """
-    try:
-        print(f"🔍 Buscando clasificación: nombre='{nombre}', primer_apellido='{primer_apellido}'")
-        
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        # Construir la consulta dinámicamente
-        query = """
-            SELECT 
-                id_classification,
-                nombre,
-                primer_apellido
-            FROM public.classification
-            WHERE 1=1
-        """
-        params = []
-
-        if nombre:
-            query += " AND name ILIKE %s"
-            params.append(f"%{nombre}%")
-        
-        if primer_apellido:
-            query += " AND first_surname ILIKE %s"
-            params.append(f"%{primer_apellido}%")
-
-        query += " ORDER BY name, first_surname"
-
-        cursor.execute(query, params)
-        resultados = cursor.fetchall()
-        conn.close()
-
-        if not resultados:
-            if nombre or primer_apellido:
-                return f"No se encontraron clasificaciones con nombre '{nombre}' y primer apellido '{primer_apellido}'."
-            else:
-                return "No se encontraron clasificaciones en la base de datos."
-
-        # Formatear resultados
-        respuesta = []
-        for id_clasificacion, nombre_clas, primer_apellido_clas in resultados:
-            respuesta.append(f"🆔 ID: {id_clasificacion} | 👤 Nombre: {nombre_clas} | 📝 Primer Apellido: {primer_apellido_clas}")
-
-        print(f"✅ Encontradas {len(resultados)} clasificaciones")
-        return "\n".join(respuesta)
-        
-    except Exception as e:
-        error_msg = f"Error al consultar clasificaciones: {str(e)}"
-        print(f"❌ {error_msg}")
-        return f"Error al consultar la base de datos: {str(e)}"
-
 
 @tool
 def procesar_devolucion(id_sales_order_detail: int) -> str:
