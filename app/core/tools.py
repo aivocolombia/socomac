@@ -1269,6 +1269,7 @@ def crear_plan_letras(
     total_amount: float,
     start_date: str,
     frequency: str,
+    letra_number: int,
     notes: str = None
 ) -> str:
     """
@@ -1277,10 +1278,11 @@ def crear_plan_letras(
     
     Args:
         id_sales_orders (int): ID de la orden de venta
-        num_installments (int): Número de letras
+        num_installments (int): Número de cuotas
         total_amount (float): Monto total del plan
         start_date (str): Fecha de inicio en formato YYYY-MM-DD
         frequency (str): Frecuencia de pago (Mensual, Quincenal, Semanal, etc.)
+        letra_number (int): Número de la letra
         notes (str, optional): Notas adicionales del plan
     
     Returns:
@@ -1291,7 +1293,7 @@ def crear_plan_letras(
             return "❌ El ID de la orden de venta debe ser un número entero positivo."
         
         if not isinstance(num_installments, int) or num_installments <= 0:
-            return "❌ El número de letras debe ser un número entero positivo."
+            return "❌ El número de cuotas debe ser un número entero positivo."
         
         if not isinstance(total_amount, (int, float)) or total_amount <= 0:
             return "❌ El monto total debe ser un número mayor que 0."
@@ -1311,7 +1313,11 @@ def crear_plan_letras(
             conn.close()
             return f"❌ No se encontró la orden de venta con ID {id_sales_orders}."
         
-        # Calcular monto por letra
+        # Validar letra_number
+        if not isinstance(letra_number, int) or letra_number <= 0:
+            return "❌ El número de letra debe ser un número entero positivo."
+        
+        # Calcular monto por cuota
         amount_per_installment = total_amount / num_installments
         
         # Insertar el plan de financiamiento tipo "Letra"
@@ -1383,7 +1389,7 @@ def crear_plan_letras(
             VALUES (
                 %s, %s, %s, 'Pendiente'
             );
-        """, (id_payment_plan, 1, due_date.strftime('%Y-%m-%d')))
+        """, (id_payment_plan, letra_number, due_date.strftime('%Y-%m-%d')))
         
         conn.commit()
         conn.close()
@@ -1392,12 +1398,13 @@ def crear_plan_letras(
             f"✅ Plan de letras creado exitosamente.\n"
             f"🆔 ID del plan: {id_payment_plan}\n"
             f"🛒 Orden de venta: {id_sales_orders}\n"
-            f"📊 Número de letras: {num_installments}\n"
+            f"📊 Número de cuotas: {num_installments}\n"
             f"💰 Monto total: {total_amount}\n"
-            f"💵 Monto por letra: {amount_per_installment:.2f}\n"
+            f"💵 Monto por cuota: {amount_per_installment:.2f}\n"
             f"📅 Fecha de inicio: {start_date}\n"
             f"🔄 Frecuencia: {frequency}\n"
             f"📝 Tipo: Letra\n"
+            f"📄 Número de letra: {letra_number}\n"
             f"📋 Estado: Pendiente"
         )
         
