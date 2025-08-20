@@ -1634,7 +1634,7 @@ def buscar_clasificacion_por_tipo(tipo: str = "") -> str:
         # Formatear resultados
         respuesta = [f"📋 Clasificaciones de {tipo}:"]
         for id_clasificacion, nombre_clas, primer_apellido_clas in resultados:
-            respuesta.append(f"🆔 ID: {id_clasificacion} | 👤 Nombre: {nombre_clas} | 📝 Primer Apellido: {primer_apellido_clas}")
+            respuesta.append(f"{id_clasificacion}. {nombre_clas} {primer_apellido_clas}")
 
         print(f"✅ Encontradas {len(resultados)} clasificaciones de {tipo}")
         return "\n".join(respuesta)
