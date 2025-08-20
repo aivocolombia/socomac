@@ -1578,11 +1578,11 @@ def procesar_devolucion(id_sales_order_detail: int) -> str:
 @tool
 def buscar_clasificacion_por_tipo(tipo: str = "") -> str:
     """
-    Busca clasificaciones en la base de datos por tipo (venta de producto o venta de servicio).
-    Venta de producto: ID 1-5, Venta de servicio: ID 6-10
+    Busca clasificaciones en la base de datos por tipo (Venta producto o Venta servicio).
+    Venta producto: ID 1-5, Venta servicio: ID 6-10
 
     Args:
-        tipo (str): Tipo de clasificación ("producto" o "servicio")
+        tipo (str): Tipo de clasificación ("Venta producto" o "Venta servicio")
 
     Returns:
         str: Lista de clasificaciones encontradas con su ID, nombre y primer apellido
@@ -1601,7 +1601,7 @@ def buscar_clasificacion_por_tipo(tipo: str = "") -> str:
                     primer_apellido
                 FROM public.classification
                 WHERE id_classification BETWEEN 1 AND 5
-                ORDER BY nombre, primer_apellido
+                ORDER BY primer_apellido
             """
         elif tipo.lower() == "venta servicio":
             query = """
@@ -1611,10 +1611,10 @@ def buscar_clasificacion_por_tipo(tipo: str = "") -> str:
                     primer_apellido
                 FROM public.classification
                 WHERE id_classification BETWEEN 6 AND 10
-                ORDER BY nombre, primer_apellido
+                ORDER BY primer_apellido
             """
         else:
-            return "❌ Tipo inválido. Debe ser 'producto' o 'servicio'."
+            return "❌ Tipo inválido. Debe ser 'Venta producto' o 'Venta servicio'."
 
         cursor.execute(query)
         resultados = cursor.fetchall()
@@ -1623,10 +1623,12 @@ def buscar_clasificacion_por_tipo(tipo: str = "") -> str:
         if not resultados:
             return f"No se encontraron clasificaciones de {tipo} en la base de datos."
 
-        # Formatear resultados
+        # Formatear resultados mostrando solo los primer_apellido para que el usuario seleccione
         respuesta = [f"📋 Clasificaciones de {tipo}:"]
+        respuesta.append("Selecciona el primer apellido que corresponda:")
+        
         for id_clasificacion, nombre_clas, primer_apellido_clas in resultados:
-            respuesta.append(f"🆔 ID: {id_clasificacion} | 👤 Nombre: {nombre_clas} | 📝 Primer Apellido: {primer_apellido_clas}")
+            respuesta.append(f"🆔 ID: {id_clasificacion} | 📝 Primer Apellido: {primer_apellido_clas}")
 
         print(f"✅ Encontradas {len(resultados)} clasificaciones de {tipo}")
         return "\n".join(respuesta)
@@ -1644,8 +1646,8 @@ def buscar_clasificacion(nombre: str = "", primer_apellido: str = "") -> str:
     Una clasificación indica si es una venta de producto o servicio.
 
     Args:
-        nombre (str): Nombre de la clasificación (opcional)
-        primer_apellido (str): Primer apellido de la clasificación (opcional)
+        nombre (str): Nombre de la clasificación
+        primer_apellido (str): Primer apellido de la clasificación 
 
     Returns:
         str: Lista de clasificaciones encontradas con su ID, nombre y primer apellido
