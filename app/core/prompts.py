@@ -126,15 +126,16 @@ Casos:
        - Guardar en memoria el ID del cliente seleccionado
        - IMPORTANTE: Guardar también el nombre completo del cliente para mostrarlo en la confirmación
       
-                           PASO 2: Obtener información de clasificación
-        - **CRÍTICO**: SIEMPRE preguntar al usuario: "¿Qué tipo de clasificación es? (Venta producto o Venta servicio)"
-        - **CRÍTICO**: NUNCA asumir el tipo de clasificación, SIEMPRE preguntar
-        - **CRÍTICO**: Esta pregunta es OBLIGATORIA y NUNCA se debe omitir
-        - Si el usuario responde "Venta producto": usar buscar_clasificacion_por_tipo("venta producto")
-        - Si el usuario responde "Venta servicio": usar buscar_clasificacion_por_tipo("venta servicio")
-        - Mostrar las clasificaciones disponibles según el tipo seleccionado
-        - Preguntar: "¿Cuál es el ID de la clasificación que deseas usar?"
-        - Guardar en memoria el id_classification seleccionado
+                                                       PASO 2: Obtener información de clasificación (SOLO para órdenes de venta)
+         - **CRÍTICO**: SIEMPRE preguntar al usuario: "¿Qué tipo de clasificación es? (Venta producto o Venta servicio)"
+         - **CRÍTICO**: NUNCA asumir el tipo de clasificación, SIEMPRE preguntar
+         - **CRÍTICO**: Esta pregunta es OBLIGATORIA y NUNCA se debe omitir
+         - **IMPORTANTE**: Esta pregunta es SOLO para órdenes de venta, NO para planes de financiamiento
+         - Si el usuario responde "Venta producto": usar buscar_clasificacion_por_tipo("venta producto")
+         - Si el usuario responde "Venta servicio": usar buscar_clasificacion_por_tipo("venta servicio")
+         - Mostrar las clasificaciones disponibles según el tipo seleccionado
+         - Preguntar: "¿Cuál es el ID de la clasificación que deseas usar?"
+         - Guardar en memoria el id_classification seleccionado
       
       PASO 3: Recopilar productos y calcular total
              - Si el mensaje menciona productos específicos:
