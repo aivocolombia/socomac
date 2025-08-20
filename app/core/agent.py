@@ -94,8 +94,8 @@ def get_agent(phone: str):
         tools=tools,
         memory=memory,
         verbose=True,
-        max_iterations=4,          
-        max_execution_time=30,     
+        max_iterations=8,          
+        max_execution_time=60,     
         early_stopping_method="generate",
         return_intermediate_steps=True,  
         handle_parsing_errors=True       
