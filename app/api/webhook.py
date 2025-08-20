@@ -176,10 +176,22 @@ class WebhookHandler:
     def validate_message(self, body: Dict[str, Any]) -> tuple:
         """Valida y extrae datos del mensaje"""
         try:
-            message_data = body.get("messages", [])[0]
+            # Verificar si es un evento de statuses (ignorar estos eventos)
+            if "statuses" in body:
+                print("📊 Evento de status ignorado (sent, delivered, read, etc.)")
+                return None, None, None, None
+            
+            # Verificar si hay mensajes
+            messages = body.get("messages", [])
+            if not messages:
+                print("📭 No hay mensajes en el webhook")
+                return None, None, None, None
+            
+            message_data = messages[0]
             phone = message_data.get("from", "")
             
             if phone not in self.authorized_phone:
+                print(f"🚫 Teléfono no autorizado: {phone}")
                 return None, None, None, None
             
             channel_id = body.get("channel_id", "")
