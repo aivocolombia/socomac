@@ -1489,6 +1489,70 @@ def consultar_detalles_ordenes_cliente(id_client: int) -> str:
 
 
 @tool
+def buscar_clasificacion(nombre: str = "", primer_apellido: str = "") -> str:
+    """
+    Busca clasificaciones en la base de datos por nombre y primer apellido.
+    Una clasificación indica si es una venta de producto o servicio.
+
+    Args:
+        nombre (str): Nombre de la clasificación (opcional)
+        primer_apellido (str): Primer apellido de la clasificación (opcional)
+
+    Returns:
+        str: Lista de clasificaciones encontradas con su ID, nombre y primer apellido
+    """
+    try:
+        print(f"🔍 Buscando clasificación: nombre='{nombre}', primer_apellido='{primer_apellido}'")
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Construir la consulta dinámicamente
+        query = """
+            SELECT 
+                id_classification,
+                nombre,
+                primer_apellido
+            FROM public.classification
+            WHERE 1=1
+        """
+        params = []
+
+        if nombre:
+            query += " AND name ILIKE %s"
+            params.append(f"%{nombre}%")
+        
+        if primer_apellido:
+            query += " AND first_surname ILIKE %s"
+            params.append(f"%{primer_apellido}%")
+
+        query += " ORDER BY name, first_surname"
+
+        cursor.execute(query, params)
+        resultados = cursor.fetchall()
+        conn.close()
+
+        if not resultados:
+            if nombre or primer_apellido:
+                return f"No se encontraron clasificaciones con nombre '{nombre}' y primer apellido '{primer_apellido}'."
+            else:
+                return "No se encontraron clasificaciones en la base de datos."
+
+        # Formatear resultados
+        respuesta = []
+        for id_clasificacion, nombre_clas, primer_apellido_clas in resultados:
+            respuesta.append(f"🆔 ID: {id_clasificacion} | 👤 Nombre: {nombre_clas} | 📝 Primer Apellido: {primer_apellido_clas}")
+
+        print(f"✅ Encontradas {len(resultados)} clasificaciones")
+        return "\n".join(respuesta)
+        
+    except Exception as e:
+        error_msg = f"Error al consultar clasificaciones: {str(e)}"
+        print(f"❌ {error_msg}")
+        return f"Error al consultar la base de datos: {str(e)}"
+
+
+@tool
 def procesar_devolucion(id_sales_order_detail: int) -> str:
     """
     Procesa una devolución marcando un detalle específico de una orden de venta como devuelto.
@@ -1578,11 +1642,11 @@ def procesar_devolucion(id_sales_order_detail: int) -> str:
 @tool
 def buscar_clasificacion_por_tipo(tipo: str = "") -> str:
     """
-    Busca clasificaciones en la base de datos por tipo (Venta producto o Venta servicio).
-    Venta producto: ID 1-5, Venta servicio: ID 6-10
+    Busca clasificaciones en la base de datos por tipo (venta de producto o venta de servicio).
+    Venta de producto: ID 1-5, Venta de servicio: ID 6-10
 
     Args:
-        tipo (str): Tipo de clasificación ("Venta producto" o "Venta servicio")
+        tipo (str): Tipo de clasificación ("producto" o "servicio")
 
     Returns:
         str: Lista de clasificaciones encontradas con su ID, nombre y primer apellido
@@ -1601,7 +1665,7 @@ def buscar_clasificacion_por_tipo(tipo: str = "") -> str:
                     primer_apellido
                 FROM public.classification
                 WHERE id_classification BETWEEN 1 AND 5
-                ORDER BY primer_apellido
+                ORDER BY nombre, primer_apellido
             """
         elif tipo.lower() == "venta servicio":
             query = """
@@ -1611,10 +1675,10 @@ def buscar_clasificacion_por_tipo(tipo: str = "") -> str:
                     primer_apellido
                 FROM public.classification
                 WHERE id_classification BETWEEN 6 AND 10
-                ORDER BY primer_apellido
+                ORDER BY nombre, primer_apellido
             """
         else:
-            return "❌ Tipo inválido. Debe ser 'Venta producto' o 'Venta servicio'."
+            return "❌ Tipo inválido. Debe ser 'producto' o 'servicio'."
 
         cursor.execute(query)
         resultados = cursor.fetchall()
@@ -1623,12 +1687,10 @@ def buscar_clasificacion_por_tipo(tipo: str = "") -> str:
         if not resultados:
             return f"No se encontraron clasificaciones de {tipo} en la base de datos."
 
-        # Formatear resultados mostrando solo los primer_apellido para que el usuario seleccione
+        # Formatear resultados
         respuesta = [f"📋 Clasificaciones de {tipo}:"]
-        respuesta.append("Selecciona el primer apellido que corresponda:")
-        
         for id_clasificacion, nombre_clas, primer_apellido_clas in resultados:
-            respuesta.append(f"🆔 ID: {id_clasificacion} | 📝 Primer Apellido: {primer_apellido_clas}")
+            respuesta.append(f"🆔 ID: {id_clasificacion} | 👤 Nombre: {nombre_clas} | 📝 Primer Apellido: {primer_apellido_clas}")
 
         print(f"✅ Encontradas {len(resultados)} clasificaciones de {tipo}")
         return "\n".join(respuesta)
@@ -1639,65 +1701,3 @@ def buscar_clasificacion_por_tipo(tipo: str = "") -> str:
         return f"Error al consultar la base de datos: {str(e)}"
 
 
-@tool
-def buscar_clasificacion(nombre: str = "", primer_apellido: str = "") -> str:
-    """
-    Busca clasificaciones en la base de datos por nombre y primer apellido.
-    Una clasificación indica si es una venta de producto o servicio.
-
-    Args:
-        nombre (str): Nombre de la clasificación
-        primer_apellido (str): Primer apellido de la clasificación 
-
-    Returns:
-        str: Lista de clasificaciones encontradas con su ID, nombre y primer apellido
-    """
-    try:
-        print(f"🔍 Buscando clasificación: nombre='{nombre}', primer_apellido='{primer_apellido}'")
-        
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        # Construir la consulta dinámicamente
-        query = """
-            SELECT 
-                id_classification,
-                nombre,
-                primer_apellido
-            FROM public.classification
-            WHERE 1=1
-        """
-        params = []
-
-        if nombre:
-            query += " AND name ILIKE %s"
-            params.append(f"%{nombre}%")
-        
-        if primer_apellido:
-            query += " AND first_surname ILIKE %s"
-            params.append(f"%{primer_apellido}%")
-
-        query += " ORDER BY name, first_surname"
-
-        cursor.execute(query, params)
-        resultados = cursor.fetchall()
-        conn.close()
-
-        if not resultados:
-            if nombre or primer_apellido:
-                return f"No se encontraron clasificaciones con nombre '{nombre}' y primer apellido '{primer_apellido}'."
-            else:
-                return "No se encontraron clasificaciones en la base de datos."
-
-        # Formatear resultados
-        respuesta = []
-        for id_clasificacion, nombre_clas, primer_apellido_clas in resultados:
-            respuesta.append(f"🆔 ID: {id_clasificacion} | 👤 Nombre: {nombre_clas} | 📝 Primer Apellido: {primer_apellido_clas}")
-
-        print(f"✅ Encontradas {len(resultados)} clasificaciones")
-        return "\n".join(respuesta)
-        
-    except Exception as e:
-        error_msg = f"Error al consultar clasificaciones: {str(e)}"
-        print(f"❌ {error_msg}")
-        return f"Error al consultar la base de datos: {str(e)}"
