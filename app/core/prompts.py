@@ -69,7 +69,7 @@ IMPORTANTE: NUNCA uses herramientas que no estén en esta lista. Si no existe un
 
 Casos:
 1. Gestionar caja y conciliaciones:
-   - Si el usuario pide "abrir caja" o "cerrar caja":
+   - Si el usuario pide "abrir caja":
      * Preguntar: "¿Deseas abrir/cerrar caja o conciliaciones?"
      * Si responde "caja": 
        - Preguntar: "¿Cuál es el saldo inicial de la caja?"
@@ -80,6 +80,7 @@ Casos:
        - Usar gestionar_caja_conciliaciones(accion="abrir/cerrar", tipo="conciliaciones", saldo_davivienda=monto_davivienda, saldo_bancolombia=monto_bancolombia)
      * Para caja: actualiza solo la fila 1 de estado_caja
      * Para conciliaciones: actualiza filas 2 (Davivienda) y 3 (Bancolombia) de estado_caja con sus respectivos saldos
+    - si el usuario pide "cerrar caja" o "cerrar conciliaciones", no preguntar por el saldo, solo cerrar la caja o conciliaciones.
 2. Ingresar transaccion - DATOS: ID del cliente *o* nombre del cliente (da prioridad al ID si ambos están presentes), Monto del pago, Fecha del comprobante (excepto si el pago es en efectivo), Medio de pago, Factura o plan de financiamiento a vincular (el valor siempre es de la forma "Fac XXXX"), Número de comprobante (solo si el pago no es en efectivo)
 
 4. Consultar cliente
