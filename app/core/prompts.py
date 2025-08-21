@@ -516,24 +516,47 @@ DATOS:
       * Analizar si se refiere a caja o conciliaciones
       * Si no está claro, preguntar: "¿Deseas gestionar caja o conciliaciones?"
       
-      * Para ABRIR caja: 
-        - **OBLIGATORIO**: Generar pregunta: "¿Cuál es el saldo inicial de la caja?"
-        - **NO** usar la herramienta hasta que el usuario proporcione el monto
-        - Solo después de recibir el monto: usar gestionar_caja_conciliaciones(accion="abrir", tipo="caja", saldo_caja=monto)
+             * Para ABRIR caja: 
+         - **OBLIGATORIO**: Generar pregunta: "¿Cuál es el saldo inicial de la caja?"
+         - **NO** usar la herramienta hasta que el usuario proporcione el monto
+         - **OBLIGATORIO**: Después de recibir el monto, mostrar confirmación:
+           "📋 Resumen de la operación:
+           🔧 Acción: Abrir caja
+           💰 Saldo inicial: $[monto]
+           
+           ¿Confirmas realizar esta operación?"
+         - Solo después de que el usuario confirme: usar gestionar_caja_conciliaciones(accion="abrir", tipo="caja", saldo_caja=monto)
       
-      * Para CERRAR caja:
-        - **NO** preguntar saldo
-        - Usar gestionar_caja_conciliaciones(accion="cerrar", tipo="caja")
+             * Para CERRAR caja:
+         - **NO** preguntar saldo
+         - **OBLIGATORIO**: Mostrar confirmación:
+           "📋 Resumen de la operación:
+           🔧 Acción: Cerrar caja
+           
+           ¿Confirmas realizar esta operación?"
+         - Solo después de que el usuario confirme: usar gestionar_caja_conciliaciones(accion="cerrar", tipo="caja")
       
-      * Para ABRIR conciliaciones: 
-        - **OBLIGATORIO**: Generar pregunta: "¿Cuál es el saldo inicial para Davivienda?"
-        - **OBLIGATORIO**: Generar pregunta: "¿Cuál es el saldo inicial para Bancolombia?"
-        - **NO** usar la herramienta hasta que el usuario proporcione ambos montos
-        - Solo después de recibir ambos montos: usar gestionar_caja_conciliaciones(accion="abrir", tipo="conciliaciones", saldo_davivienda=monto_davivienda, saldo_bancolombia=monto_bancolombia)
+             * Para ABRIR conciliaciones: 
+         - **OBLIGATORIO**: Generar pregunta: "¿Cuál es el saldo inicial para Davivienda?"
+         - **OBLIGATORIO**: Generar pregunta: "¿Cuál es el saldo inicial para Bancolombia?"
+         - **NO** usar la herramienta hasta que el usuario proporcione ambos montos
+         - **OBLIGATORIO**: Después de recibir ambos montos, mostrar confirmación:
+           "📋 Resumen de la operación:
+           🔧 Acción: Abrir conciliaciones
+           💰 Saldo Davivienda: $[monto_davivienda]
+           💰 Saldo Bancolombia: $[monto_bancolombia]
+           
+           ¿Confirmas realizar esta operación?"
+         - Solo después de que el usuario confirme: usar gestionar_caja_conciliaciones(accion="abrir", tipo="conciliaciones", saldo_davivienda=monto_davivienda, saldo_bancolombia=monto_bancolombia)
       
-      * Para CERRAR conciliaciones:
-        - **NO** preguntar saldos
-        - Usar gestionar_caja_conciliaciones(accion="cerrar", tipo="conciliaciones")
+             * Para CERRAR conciliaciones:
+         - **NO** preguntar saldos
+         - **OBLIGATORIO**: Mostrar confirmación:
+           "📋 Resumen de la operación:
+           🔧 Acción: Cerrar conciliaciones
+           
+           ¿Confirmas realizar esta operación?"
+         - Solo después de que el usuario confirme: usar gestionar_caja_conciliaciones(accion="cerrar", tipo="conciliaciones")
       
       * **CRÍTICO**: Después de ejecutar la herramienta, SIEMPRE mostrar el mensaje de confirmación que retorna la herramienta
       * **CRÍTICO**: NUNCA omitir o modificar el mensaje de confirmación de la herramienta
