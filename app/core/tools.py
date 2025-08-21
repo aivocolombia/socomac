@@ -1703,8 +1703,16 @@ def gestionar_caja_conciliaciones(accion: str, tipo: str, saldo_caja: float = No
             """
             
             print(f"🔧 Actualizando fila {id_fila} con saldo: {saldos[i]}, estado_caj: {estado_caj}")
+            print(f"🔧 Query SQL: {query}")
+            print(f"🔧 Parámetros: id={id_fila}, saldo={saldos[i]}, estado_caj={estado_caj}")
+            
             cursor.execute(query, (id_fila, saldos[i], estado_caj))
-            print(f"✅ Fila {id_fila} actualizada exitosamente")
+            
+            # Verificar que la actualización fue exitosa
+            verify_query = "SELECT id, saldo_inicial, estado_caj FROM estado_caja WHERE id = %s"
+            cursor.execute(verify_query, (id_fila,))
+            result = cursor.fetchone()
+            print(f"✅ Fila {id_fila} actualizada exitosamente - Verificación: {result}")
         
         conn.commit()
         conn.close()
@@ -1719,13 +1727,15 @@ def gestionar_caja_conciliaciones(accion: str, tipo: str, saldo_caja: float = No
                     f"✅ {accion.capitalize()} de caja exitosa.\n"
                     f"💰 Saldo inicial: {saldo_caja:,.2f}\n"
                     f"📊 Estado: {estado_texto}\n"
-                    f"🆔 Fila actualizada: 1"
+                    f"🆔 Fila actualizada: 1\n"
+                    f"🎯 Operación completada exitosamente."
                 )
             else:
                 return (
                     f"✅ {accion.capitalize()} de caja exitosa.\n"
                     f"📊 Estado: {estado_texto}\n"
-                    f"🆔 Fila actualizada: 1"
+                    f"🆔 Fila actualizada: 1\n"
+                    f"🎯 Operación completada exitosamente."
                 )
         else:
             if accion.lower() == "abrir":
@@ -1734,13 +1744,15 @@ def gestionar_caja_conciliaciones(accion: str, tipo: str, saldo_caja: float = No
                     f"💰 Saldo Davivienda: {saldo_davivienda:,.2f}\n"
                     f"💰 Saldo Bancolombia: {saldo_bancolombia:,.2f}\n"
                     f"📊 Estado: {estado_texto}\n"
-                    f"🆔 Filas actualizadas: 2, 3"
+                    f"🆔 Filas actualizadas: 2, 3\n"
+                    f"🎯 Operación completada exitosamente."
                 )
             else:
                 return (
                     f"✅ {accion.capitalize()} de conciliaciones bancarias exitosa.\n"
                     f"📊 Estado: {estado_texto}\n"
-                    f"🆔 Filas actualizadas: 2, 3"
+                    f"🆔 Filas actualizadas: 2, 3\n"
+                    f"🎯 Operación completada exitosamente."
                 )
         
     except Exception as e:
