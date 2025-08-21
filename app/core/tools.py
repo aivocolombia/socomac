@@ -1,11 +1,8 @@
 # app/core/tools.py
-
 from langchain.tools import tool
 from app.data.questions import question_list
 from app.db.respositories import get_db_connection
 from app.db.mongo import MongoChatMessageHistory
-
-
 
 @tool
 def limpiar_memoria(phone: str) -> str:
@@ -24,7 +21,6 @@ def limpiar_memoria(phone: str) -> str:
         error_msg = f"Error al limpiar la memoria: {str(e)}"
         print(f"❌ {error_msg}")
         return error_msg
-
 
 @tool
 def nombre_cliente(nombre: str = "", offset: int = 0, limit: int = 10) -> str:
@@ -146,7 +142,6 @@ def nombre_cliente(nombre: str = "", offset: int = 0, limit: int = 10) -> str:
         print(f"❌ {error_msg}")
         return f"Error al consultar la base de datos: {str(e)}"
 
-
 @tool
 def nombre_empresa(nombre: str = "", offset: int = 0, limit: int = 10) -> str:
     """
@@ -203,7 +198,6 @@ def nombre_empresa(nombre: str = "", offset: int = 0, limit: int = 10) -> str:
         error_msg = f"Error al consultar empresas: {str(e)}"
         print(f"❌ {error_msg}")
         return f"Error al consultar la base de datos: {str(e)}"
-
 
 @tool
 def planes_pago_pendientes_por_cliente(id_cliente: int) -> str:
@@ -263,7 +257,6 @@ def planes_pago_pendientes_por_cliente(id_cliente: int) -> str:
         error_msg = f"Error al consultar planes de pago: {str(e)}"
         print(f"❌ {error_msg}")
         return f"Error al consultar la base de datos: {str(e)}"
-
 
 @tool
 def montos_a_favor_por_cliente(id_cliente: int) -> str:
@@ -443,7 +436,6 @@ def consultar_productos(nombre: str = "", offset: int = 0, limit: int = 10) -> s
         print(f"❌ {error_msg}")
         return f"Error al consultar la base de datos: {str(e)}"
 
-
 @tool
 def obtener_id_sales_orders_por_plan(id_payment_plan: int) -> str:
     """
@@ -482,7 +474,6 @@ def obtener_id_sales_orders_por_plan(id_payment_plan: int) -> str:
         print(f"❌ {error_msg}")
         return error_msg
 
-
 @tool
 def obtener_id_client_por_orden(id_sales_orders: int) -> str:
     """
@@ -520,7 +511,6 @@ def obtener_id_client_por_orden(id_sales_orders: int) -> str:
         error_msg = f"❌ Error al obtener id_client: {str(e)}"
         print(f"❌ {error_msg}")
         return error_msg
-
 
 @tool
 def registrar_pago(
@@ -647,7 +637,6 @@ def registrar_pago(
         print(f"❌ {error_msg}")
         return error_msg
 
-
 @tool
 def crear_orden_venta(
     id_client: int,
@@ -728,7 +717,6 @@ def crear_orden_venta(
         error_msg = f"❌ Error al crear la orden de venta: {str(e)}"
         print(f"❌ {error_msg}")
         return error_msg
-
 
 @tool
 def registrar_pago_directo_orden(
@@ -838,7 +826,6 @@ def registrar_pago_directo_orden(
         print(f"❌ {error_msg}")
         return error_msg
 
-
 @tool
 def agregar_detalle_orden_venta(
     id_sales_orders: int,
@@ -917,7 +904,6 @@ def agregar_detalle_orden_venta(
         print(f"❌ {error_msg}")
         return error_msg
 
-
 @tool
 def buscar_producto_por_nombre(nombre_producto: str) -> str:
     """
@@ -988,7 +974,6 @@ def buscar_producto_por_nombre(nombre_producto: str) -> str:
         error_msg = f"❌ Error al buscar el producto: {str(e)}"
         print(f"❌ {error_msg}")
         return error_msg
-
 
 @tool
 def crear_plan_financiamiento(
@@ -1120,7 +1105,6 @@ def crear_plan_financiamiento(
         error_msg = f"❌ Error al crear el plan de financiamiento: {str(e)}"
         print(f"❌ {error_msg}")
         return error_msg
-
 
 @tool
 def crear_nuevo_cliente(
@@ -1260,7 +1244,6 @@ def crear_nuevo_cliente(
         error_msg = f"❌ Error al crear el cliente: {str(e)}"
         print(f"❌ {error_msg}")
         return error_msg
-
 
 @tool
 def crear_plan_letras(
@@ -1413,7 +1396,6 @@ def crear_plan_letras(
         print(f"❌ {error_msg}")
         return error_msg
 
-
 @tool
 def consultar_detalles_ordenes_cliente(id_client: int) -> str:
     """
@@ -1493,8 +1475,6 @@ def consultar_detalles_ordenes_cliente(id_client: int) -> str:
         error_msg = f"❌ Error al consultar detalles de órdenes: {str(e)}"
         print(f"❌ {error_msg}")
         return error_msg
-
-
 
 @tool
 def procesar_devolucion(id_sales_order_detail: int) -> str:
@@ -1582,7 +1562,6 @@ def procesar_devolucion(id_sales_order_detail: int) -> str:
         print(f"❌ {error_msg}")
         return error_msg
 
-
 @tool
 def buscar_clasificacion_por_tipo(tipo: str = "") -> str:
     """
@@ -1643,5 +1622,98 @@ def buscar_clasificacion_por_tipo(tipo: str = "") -> str:
         error_msg = f"Error al consultar clasificaciones por tipo: {str(e)}"
         print(f"❌ {error_msg}")
         return f"Error al consultar la base de datos: {str(e)}"
+
+@tool
+def gestionar_caja_conciliaciones(accion: str, tipo: str, saldo_caja: float = None, saldo_davivienda: float = None, saldo_bancolombia: float = None) -> str:
+    """
+    Gestiona la apertura y cierre de caja y conciliaciones bancarias.
+    
+    Args:
+        accion (str): "abrir" o "cerrar"
+        tipo (str): "caja" (solo fila 1) o "conciliaciones" (filas 2 y 3)
+        saldo_caja (float): Monto para caja (solo cuando tipo="caja")
+        saldo_davivienda (float): Monto para banco Davivienda (solo cuando tipo="conciliaciones")
+        saldo_bancolombia (float): Monto para banco Bancolombia (solo cuando tipo="conciliaciones")
+    
+    Returns:
+        str: Confirmación de la operación realizada
+    """
+    try:
+        # Validar parámetros según el tipo
+        if tipo.lower() == "caja":
+            if saldo_caja is None:
+                return "❌ Para caja, debes proporcionar el saldo_caja."
+            print(f"💰 Gestionando {accion} de {tipo} con saldo: {saldo_caja}")
+        elif tipo.lower() == "conciliaciones":
+            if saldo_davivienda is None or saldo_bancolombia is None:
+                return "❌ Para conciliaciones, debes proporcionar saldo_davivienda y saldo_bancolombia."
+            print(f"💰 Gestionando {accion} de {tipo} - Davivienda: {saldo_davivienda}, Bancolombia: {saldo_bancolombia}")
+        else:
+            return "❌ Tipo inválido. Debe ser 'caja' o 'conciliaciones'."
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Determinar el estado según la acción
+        if accion.lower() == "abrir":
+            estado_caj = True
+        elif accion.lower() == "cerrar":
+            estado_caj = False
+        else:
+            conn.close()
+            return "❌ Acción inválida. Debe ser 'abrir' o 'cerrar'."
+        
+        # Determinar qué filas actualizar según el tipo
+        if tipo.lower() == "caja":
+            # Solo actualizar fila 1 (caja)
+            ids_to_update = [1]
+            saldos = [saldo_caja]
+        elif tipo.lower() == "conciliaciones":
+            # Actualizar filas 2 (Davivienda) y 3 (Bancolombia)
+            ids_to_update = [2, 3]
+            saldos = [saldo_davivienda, saldo_bancolombia]
+        
+        # Ejecutar las actualizaciones
+        for i, id_fila in enumerate(ids_to_update):
+            query = """
+                INSERT INTO estado_caja
+                (id, saldo_inicial, estado_caj)
+                VALUES (%s, %s, %s)
+                ON CONFLICT (id) DO UPDATE
+                SET 
+                    saldo_inicial = EXCLUDED.saldo_inicial,
+                    updated_at = NOW(),
+                    estado_caj = EXCLUDED.estado_caj
+            """
+            
+            cursor.execute(query, (id_fila, saldos[i], estado_caj))
+        
+        conn.commit()
+        conn.close()
+        
+        # Determinar el texto del estado para mostrar
+        estado_texto = "Abierta" if estado_caj else "Cerrada"
+        
+        # Construir mensaje según el tipo
+        if tipo.lower() == "caja":
+            return (
+                f"✅ {accion.capitalize()} de caja exitosa.\n"
+                f"💰 Saldo inicial: {saldo_caja:,.2f}\n"
+                f"📊 Estado: {estado_texto}\n"
+                f"🆔 Fila actualizada: 1"
+            )
+        else:
+            return (
+                f"✅ {accion.capitalize()} de conciliaciones bancarias exitosa.\n"
+                f"💰 Saldo Davivienda: {saldo_davivienda:,.2f}\n"
+                f"💰 Saldo Bancolombia: {saldo_bancolombia:,.2f}\n"
+                f"📊 Estado: {estado_texto}\n"
+                f"🆔 Filas actualizadas: 2, 3"
+            )
+        
+    except Exception as e:
+        error_msg = f"Error al gestionar {accion} de {tipo}: {str(e)}"
+        print(f"❌ {error_msg}")
+        return error_msg
 
 

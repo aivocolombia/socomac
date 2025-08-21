@@ -28,7 +28,8 @@ from app.core.tools import (
     crear_plan_letras,
     crear_nuevo_cliente,
     consultar_detalles_ordenes_cliente,
-    procesar_devolucion
+    procesar_devolucion,
+    gestionar_caja_conciliaciones
 )
 import os
 import json
@@ -64,7 +65,8 @@ tools = [
    crear_plan_letras,
    crear_nuevo_cliente,
    consultar_detalles_ordenes_cliente,
-   procesar_devolucion
+   procesar_devolucion,
+   gestionar_caja_conciliaciones
 ]
 
 
