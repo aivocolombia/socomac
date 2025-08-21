@@ -524,15 +524,20 @@ DATOS:
 
 11. GESTIÓN DE CAJA Y CONCILIACIONES:
     - Si el usuario pide "abrir caja", "cerrar caja", "abrir conciliaciones" o "cerrar conciliaciones":
+      * **CRÍTICO**: Siempre preguntar los montos cuando sea "abrir", nunca cuando sea "cerrar"
       * Analizar si se refiere a caja o conciliaciones
       * Si no está claro, preguntar: "¿Deseas gestionar caja o conciliaciones?"
-      * Para caja: 
-        - Preguntar: "¿Cuál es el saldo inicial de la caja?"
-        - Usar gestionar_caja_conciliaciones(accion="abrir/cerrar", tipo="caja", saldo_caja=monto)
-      * Para conciliaciones: 
-        - Preguntar: "¿Cuál es el saldo inicial para Davivienda?"
-        - Preguntar: "¿Cuál es el saldo inicial para Bancolombia?"
-        - Usar gestionar_caja_conciliaciones(accion="abrir/cerrar", tipo="conciliaciones", saldo_davivienda=monto_davivienda, saldo_bancolombia=monto_bancolombia)
+      * Para ABRIR caja: 
+        - Preguntar OBLIGATORIAMENTE: "¿Cuál es el saldo inicial de la caja?"
+        - Usar gestionar_caja_conciliaciones(accion="abrir", tipo="caja", saldo_caja=monto)
+      * Para CERRAR caja:
+        - NO preguntar saldo, usar gestionar_caja_conciliaciones(accion="cerrar", tipo="caja")
+      * Para ABRIR conciliaciones: 
+        - Preguntar OBLIGATORIAMENTE: "¿Cuál es el saldo inicial para Davivienda?"
+        - Preguntar OBLIGATORIAMENTE: "¿Cuál es el saldo inicial para Bancolombia?"
+        - Usar gestionar_caja_conciliaciones(accion="abrir", tipo="conciliaciones", saldo_davivienda=monto_davivienda, saldo_bancolombia=monto_bancolombia)
+      * Para CERRAR conciliaciones:
+        - NO preguntar saldos, usar gestionar_caja_conciliaciones(accion="cerrar", tipo="conciliaciones")
       * Confirmar la operación antes de ejecutarla
     
     ESTRUCTURA DE LA TABLA estado_caja:

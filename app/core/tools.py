@@ -1639,6 +1639,8 @@ def gestionar_caja_conciliaciones(accion: str, tipo: str, saldo_caja: float = No
         str: Confirmación de la operación realizada
     """
     try:
+        print(f"🔧 gestionar_caja_conciliaciones - Acción: {accion}, Tipo: {tipo}")
+        print(f"🔧 Parámetros - saldo_caja: {saldo_caja}, saldo_davivienda: {saldo_davivienda}, saldo_bancolombia: {saldo_bancolombia}")
         # Validar parámetros según el tipo y la acción
         if accion.lower() == "abrir":
             if tipo.lower() == "caja":
@@ -1683,6 +1685,10 @@ def gestionar_caja_conciliaciones(accion: str, tipo: str, saldo_caja: float = No
                 saldo_bancolombia if accion.lower() == "abrir" else 0
             ]
         
+        print(f"🔧 Filas a actualizar: {ids_to_update}")
+        print(f"🔧 Saldos a usar: {saldos}")
+        print(f"🔧 Estado final: {estado_caj}")
+        
         # Ejecutar las actualizaciones
         for i, id_fila in enumerate(ids_to_update):
             query = """
@@ -1696,7 +1702,9 @@ def gestionar_caja_conciliaciones(accion: str, tipo: str, saldo_caja: float = No
                     estado_caj = EXCLUDED.estado_caj
             """
             
+            print(f"🔧 Actualizando fila {id_fila} con saldo: {saldos[i]}, estado_caj: {estado_caj}")
             cursor.execute(query, (id_fila, saldos[i], estado_caj))
+            print(f"✅ Fila {id_fila} actualizada exitosamente")
         
         conn.commit()
         conn.close()
