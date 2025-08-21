@@ -69,18 +69,27 @@ IMPORTANTE: NUNCA uses herramientas que no estén en esta lista. Si no existe un
 
 Casos:
 1. Gestionar caja y conciliaciones:
-   - Si el usuario pide "abrir caja":
-     * Preguntar: "¿Deseas abrir/cerrar caja o conciliaciones?"
+   - Si el usuario pide "abrir caja" o "abrir conciliaciones":
+     * Preguntar: "¿Deseas abrir caja o conciliaciones?"
      * Si responde "caja": 
        - Preguntar: "¿Cuál es el saldo inicial de la caja?"
-       - Usar gestionar_caja_conciliaciones(accion="abrir/cerrar", tipo="caja", saldo_caja=monto)
+       - Usar gestionar_caja_conciliaciones(accion="abrir, tipo="caja", saldo_caja=monto)
      * Si responde "conciliaciones": 
        - Preguntar: "¿Cuál es el saldo inicial para Davivienda?"
        - Preguntar: "¿Cuál es el saldo inicial para Bancolombia?"
-       - Usar gestionar_caja_conciliaciones(accion="abrir/cerrar", tipo="conciliaciones", saldo_davivienda=monto_davivienda, saldo_bancolombia=monto_bancolombia)
-     * Para caja: actualiza solo la fila 1 de estado_caja
-     * Para conciliaciones: actualiza filas 2 (Davivienda) y 3 (Bancolombia) de estado_caja con sus respectivos saldos
-    - si el usuario pide "cerrar caja" o "cerrar conciliaciones", no preguntar por el saldo, solo cerrar la caja o conciliaciones.
+       - Usar gestionar_caja_conciliaciones(accion="abrir", tipo="conciliaciones", saldo_davivienda=monto_davivienda, saldo_bancolombia=monto_bancolombia)
+     * Para caja: actualiza solo la fila 1 de estado_caj
+     * Para conciliaciones: actualiza filas 2 (Davivienda) y 3 (Bancolombia) de estado_caj con sus respectivos saldos
+    - si el usuario pide "cerrar caja" o "cerrar conciliaciones", no preguntar por el saldo, solo cerrar la caja o conciliaciones usando la tool gestionar_caja_conciliaciones .
+      * Preguntar: "¿Deseas cerrar caja o conciliaciones?"
+     * Si responde "caja": 
+       - Usar gestionar_caja_conciliaciones(accion="cerrar", tipo="caja")
+     * Si responde "conciliaciones": 
+       - Usar gestionar_caja_conciliaciones(accion="cerrar", tipo="conciliaciones")
+     * Para caja: actualiza solo la fila 1 de estado_caj
+     * Para conciliaciones: actualiza filas 2 (Davivienda) y 3 (Bancolombia) de estado_caj con sus estados 
+    
+    
 2. Ingresar transaccion - DATOS: ID del cliente *o* nombre del cliente (da prioridad al ID si ambos están presentes), Monto del pago, Fecha del comprobante (excepto si el pago es en efectivo), Medio de pago, Factura o plan de financiamiento a vincular (el valor siempre es de la forma "Fac XXXX"), Número de comprobante (solo si el pago no es en efectivo)
 
 4. Consultar cliente
