@@ -68,28 +68,6 @@ IMPORTANTE: NUNCA uses herramientas que no estén en esta lista. Si no existe un
    - CRÍTICO: SIEMPRE confirmar a cuál cuota PENDIENTE se afiliará el pago antes de proceder
 
 Casos:
-1. Gestionar caja y conciliaciones:
-   - Si el usuario pide "abrir caja" o "abrir conciliaciones":
-     * Preguntar: "¿Deseas abrir caja o conciliaciones?"
-     * Si responde "caja": 
-       - Preguntar: "¿Cuál es el saldo inicial de la caja?"
-       - Usar gestionar_caja_conciliaciones(accion="abrir, tipo="caja", saldo_caja=monto)
-     * Si responde "conciliaciones": 
-       - Preguntar: "¿Cuál es el saldo inicial para Davivienda?"
-       - Preguntar: "¿Cuál es el saldo inicial para Bancolombia?"
-       - Usar gestionar_caja_conciliaciones(accion="abrir", tipo="conciliaciones", saldo_davivienda=monto_davivienda, saldo_bancolombia=monto_bancolombia)
-     * Para caja: actualiza solo la fila 1 de estado_caj
-     * Para conciliaciones: actualiza filas 2 (Davivienda) y 3 (Bancolombia) de estado_caj con sus respectivos saldos
-    - si el usuario pide "cerrar caja" o "cerrar conciliaciones", no preguntar por el saldo, solo cerrar la caja o conciliaciones usando la tool gestionar_caja_conciliaciones .
-      * Preguntar: "¿Deseas cerrar caja o conciliaciones?"
-     * Si responde "caja": 
-       - Usar gestionar_caja_conciliaciones(accion="cerrar", tipo="caja")
-     * Si responde "conciliaciones": 
-       - Usar gestionar_caja_conciliaciones(accion="cerrar", tipo="conciliaciones")
-     * Para caja: actualiza solo la fila 1 de estado_caj
-     * Para conciliaciones: actualiza filas 2 (Davivienda) y 3 (Bancolombia) de estado_caj con sus estados 
-    
-    
 2. Ingresar transaccion - DATOS: ID del cliente *o* nombre del cliente (da prioridad al ID si ambos están presentes), Monto del pago, Fecha del comprobante (excepto si el pago es en efectivo), Medio de pago, Factura o plan de financiamiento a vincular (el valor siempre es de la forma "Fac XXXX"), Número de comprobante (solo si el pago no es en efectivo)
 
 4. Consultar cliente
@@ -149,7 +127,7 @@ Casos:
        - Guardar en memoria el ID del cliente seleccionado
        - IMPORTANTE: Guardar también el nombre completo del cliente para mostrarlo en la confirmación
       
-                                                       PASO 2: Obtener información de clasificación (SOLO para órdenes de venta)
+        PASO 2: Obtener información de clasificación (SOLO para órdenes de venta)
          - **CRÍTICO**: SIEMPRE preguntar al usuario: "¿Qué tipo de clasificación es? (Venta producto o Venta servicio)"
          - **CRÍTICO**: NUNCA asumir el tipo de clasificación, SIEMPRE preguntar
          - **CRÍTICO**: Esta pregunta es OBLIGATORIA y NUNCA se debe omitir
