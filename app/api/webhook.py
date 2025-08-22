@@ -164,7 +164,7 @@ class WebhookHandler:
     def __init__(self):
         self.message_processor = MessageProcessor()
         self.response_sender = ResponseSender()
-        self.authorized_phone = ["573195792747", "573172288329", "573171503273"]
+        self.authorized_phone = ["573195792747", "573172288329"]
     
     def validate_message(self, body: Dict[str, Any]) -> tuple:
         """Valida y extrae datos del mensaje"""
