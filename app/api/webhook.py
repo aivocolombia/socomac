@@ -165,7 +165,7 @@ class WebhookHandler:
         self.message_processor = MessageProcessor()
         self.response_sender = ResponseSender()
         self.authorized_phone = ["573195792747", "573172288329"]
-    
+    #TODO verificar numero de telefono del agente de whatsapp, no está tomandolo correctamente.
     def validate_message(self, body: Dict[str, Any]) -> tuple:
         """Valida y extrae datos del mensaje"""
         try:
