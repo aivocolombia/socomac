@@ -1629,18 +1629,58 @@ def gestionar_caja_conciliaciones(accion: str, tipo: str, saldo_caja: float = No
     Gestiona la apertura y cierre de caja y conciliaciones bancarias.
     
     Args:
-        accion (str): "abrir" o "cerrar"
+        accion (str): "abrir", "cerrar" o "consultar"
         tipo (str): "caja" (solo fila 1) o "conciliaciones" (filas 2 y 3)
-        saldo_caja (float): Monto para caja (solo cuando tipo="caja")
-        saldo_davivienda (float): Monto para banco Davivienda (solo cuando tipo="conciliaciones")
-        saldo_bancolombia (float): Monto para banco Bancolombia (solo cuando tipo="conciliaciones")
+        saldo_caja (float): Monto para caja (solo cuando tipo="caja" y accion="abrir")
+        saldo_davivienda (float): Monto para banco Davivienda (solo cuando tipo="conciliaciones" y accion="abrir")
+        saldo_bancolombia (float): Monto para banco Bancolombia (solo cuando tipo="conciliaciones" y accion="abrir")
     
     Returns:
-        str: Confirmación de la operación realizada
+        str: Confirmación de la operación realizada o estado actual
     """
     try:
         print(f"🔧 gestionar_caja_conciliaciones - Acción: {accion}, Tipo: {tipo}")
         print(f"🔧 Parámetros - saldo_caja: {saldo_caja}, saldo_davivienda: {saldo_davivienda}, saldo_bancolombia: {saldo_bancolombia}")
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Si es consulta, solo leer el estado actual
+        if accion.lower() == "consultar":
+            if tipo.lower() == "caja":
+                # Consultar solo fila 1 (caja)
+                query = "SELECT id, saldo_inicial, estado_caj FROM estado_caja WHERE id = 1"
+                cursor.execute(query)
+                result = cursor.fetchone()
+                conn.close()
+                
+                if result:
+                    id_fila, saldo_inicial, estado_caj = result
+                    estado_texto = "Abierta" if estado_caj else "Cerrada"
+                    return f"📊 Estado actual de la caja:\n🔧 Estado: {estado_texto}\n💰 Saldo inicial: ${saldo_inicial:,.2f}"
+                else:
+                    return "❌ No se encontró información de la caja"
+                    
+            elif tipo.lower() == "conciliaciones":
+                # Consultar filas 2 (Davivienda) y 3 (Bancolombia)
+                query = "SELECT id, saldo_inicial, estado_caj FROM estado_caja WHERE id IN (2, 3) ORDER BY id"
+                cursor.execute(query)
+                results = cursor.fetchall()
+                conn.close()
+                
+                if results:
+                    response = "📊 Estado actual de las conciliaciones:\n"
+                    for id_fila, saldo_inicial, estado_caj in results:
+                        banco = "Davivienda" if id_fila == 2 else "Bancolombia"
+                        estado_texto = "Abierta" if estado_caj else "Cerrada"
+                        response += f"🏦 {banco}:\n   🔧 Estado: {estado_texto}\n   💰 Saldo inicial: ${saldo_inicial:,.2f}\n"
+                    return response
+                else:
+                    return "❌ No se encontró información de las conciliaciones"
+            else:
+                conn.close()
+                return "❌ Tipo inválido para consulta. Debe ser 'caja' o 'conciliaciones'."
+        
         # Validar parámetros según el tipo y la acción
         if accion.lower() == "abrir":
             if tipo.lower() == "caja":
@@ -1658,10 +1698,8 @@ def gestionar_caja_conciliaciones(accion: str, tipo: str, saldo_caja: float = No
                 return "❌ Tipo inválido. Debe ser 'caja' o 'conciliaciones'."
             print(f"🔒 Cerrando {tipo}")
         else:
-            return "❌ Acción inválida. Debe ser 'abrir' o 'cerrar'."
-        
-        conn = get_db_connection()
-        cursor = conn.cursor()
+            conn.close()
+            return "❌ Acción inválida. Debe ser 'abrir', 'cerrar' o 'consultar'."
         
         # Determinar el estado según la acción
         if accion.lower() == "abrir":
@@ -1723,41 +1761,17 @@ def gestionar_caja_conciliaciones(accion: str, tipo: str, saldo_caja: float = No
         # Construir mensaje según el tipo y la acción
         if tipo.lower() == "caja":
             if accion.lower() == "abrir":
-                return (
-                    f"✅ {accion.capitalize()} de caja exitosa.\n"
-                    f"💰 Saldo inicial: {saldo_caja:,.2f}\n"
-                    f"📊 Estado: {estado_texto}\n"
-                    f"🆔 Fila actualizada: 1\n"
-                    f"🎯 Operación completada exitosamente."
-                )
-            else:
-                return (
-                    f"✅ {accion.capitalize()} de caja exitosa.\n"
-                    f"📊 Estado: {estado_texto}\n"
-                    f"🆔 Fila actualizada: 1\n"
-                    f"🎯 Operación completada exitosamente."
-                )
-        else:
+                return f"✅ Caja {estado_texto.lower()} exitosamente\n💰 Saldo inicial: ${saldo_caja:,.2f}\n🎯 Operación completada exitosamente."
+            else:  # cerrar
+                return f"✅ Caja {estado_texto.lower()} exitosamente\n🎯 Operación completada exitosamente."
+        elif tipo.lower() == "conciliaciones":
             if accion.lower() == "abrir":
-                return (
-                    f"✅ {accion.capitalize()} de conciliaciones bancarias exitosa.\n"
-                    f"💰 Saldo Davivienda: {saldo_davivienda:,.2f}\n"
-                    f"💰 Saldo Bancolombia: {saldo_bancolombia:,.2f}\n"
-                    f"📊 Estado: {estado_texto}\n"
-                    f"🆔 Filas actualizadas: 2, 3\n"
-                    f"🎯 Operación completada exitosamente."
-                )
-            else:
-                return (
-                    f"✅ {accion.capitalize()} de conciliaciones bancarias exitosa.\n"
-                    f"📊 Estado: {estado_texto}\n"
-                    f"🆔 Filas actualizadas: 2, 3\n"
-                    f"🎯 Operación completada exitosamente."
-                )
+                return f"✅ Conciliaciones {estado_texto.lower()}s exitosamente\n💰 Saldo Davivienda: ${saldo_davivienda:,.2f}\n💰 Saldo Bancolombia: ${saldo_bancolombia:,.2f}\n🎯 Operación completada exitosamente."
+            else:  # cerrar
+                return f"✅ Conciliaciones {estado_texto.lower()}s exitosamente\n🎯 Operación completada exitosamente."
         
     except Exception as e:
-        error_msg = f"Error al gestionar {accion} de {tipo}: {str(e)}"
-        print(f"❌ {error_msg}")
-        return error_msg
+        print(f"❌ Error en gestionar_caja_conciliaciones: {str(e)}")
+        return f"❌ Error al gestionar {tipo}: {str(e)}"
 
 

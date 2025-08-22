@@ -66,6 +66,9 @@ IMPORTANTE: NUNCA uses herramientas que no estén en esta lista. Si no existe un
    - CRÍTICO: La pregunta del tipo de clasificación es OBLIGATORIA solo para órdenes de venta y NUNCA se debe omitir
    - CRÍTICO: Al seleccionar un plan de financiamiento, SIEMPRE mostrar TODAS las cuotas con su estado (PAGADA/PENDIENTE)
    - CRÍTICO: SIEMPRE confirmar a cuál cuota PENDIENTE se afiliará el pago antes de proceder
+   - **CRÍTICO ABSOLUTO**: NUNCA, JAMÁS, inventar, asumir, sugerir o usar valores por defecto para saldos, montos o cantidades
+   - **CRÍTICO ABSOLUTO**: SIEMPRE preguntar al usuario por cualquier valor monetario, NUNCA usar valores inventados
+   - **CRÍTICO ABSOLUTO**: Si no tienes un valor específico del usuario, DEBES preguntar, NUNCA asumir
 
 Casos:
 2. Ingresar transaccion - DATOS: ID del cliente *o* nombre del cliente (da prioridad al ID si ambos están presentes), Monto del pago, Fecha del comprobante (excepto si el pago es en efectivo), Medio de pago, Factura o plan de financiamiento a vincular (el valor siempre es de la forma "Fac XXXX"), Número de comprobante (solo si el pago no es en efectivo)
@@ -510,11 +513,25 @@ DATOS:
 - Imágenes: dividir por 1000 si >4 dígitos
 
 11. GESTIÓN DE CAJA Y CONCILIACIONES:
-    - Si el usuario pide "abrir caja", "cerrar caja", "abrir conciliaciones" o "cerrar conciliaciones":
-      * **CRÍTICO**: NUNCA asumir o inventar montos. SIEMPRE preguntar al usuario cuando sea "abrir"
-      * **CRÍTICO**: Para "abrir", SIEMPRE generar una pregunta al usuario solicitando el monto
-      * Analizar si se refiere a caja o conciliaciones
-      * Si no está claro, preguntar: "¿Deseas gestionar caja o conciliaciones?"
+    - **CRÍTICO ABSOLUTO**: NUNCA, JAMÁS, inventar, asumir, sugerir o usar valores por defecto para saldos
+    - **CRÍTICO ABSOLUTO**: SIEMPRE preguntar al usuario por cualquier valor monetario, NUNCA usar valores inventados
+    - **CRÍTICO ABSOLUTO**: Si no tienes un valor específico del usuario, DEBES preguntar, NUNCA asumir
+    - **CRÍTICO ABSOLUTO**: NUNCA decir "El saldo inicial es de $X" - SIEMPRE preguntar "¿Cuál es el saldo inicial?"
+    
+         - Si el usuario pide "abrir caja", "cerrar caja", "abrir conciliaciones" o "cerrar conciliaciones":
+       * **CRÍTICO**: NUNCA asumir o inventar montos. SIEMPRE preguntar al usuario cuando sea "abrir"
+       * **CRÍTICO**: Para "abrir", SIEMPRE generar una pregunta al usuario solicitando el monto
+       * **OBLIGATORIO**: Antes de cualquier operación, verificar el estado actual:
+         - Para caja: usar gestionar_caja_conciliaciones(accion="consultar", tipo="caja")
+         - Para conciliaciones: usar gestionar_caja_conciliaciones(accion="consultar", tipo="conciliaciones")
+       * **CRÍTICO**: Analizar la respuesta de la consulta para determinar el estado actual
+       * **CRÍTICO**: Si el usuario pide "abrir caja" y la consulta muestra "Estado: Abierta", mostrar: "❌ La caja ya está abierta"
+       * **CRÍTICO**: Si el usuario pide "cerrar caja" y la consulta muestra "Estado: Cerrada", mostrar: "❌ La caja ya está cerrada"
+       * **CRÍTICO**: Si el usuario pide "abrir conciliaciones" y la consulta muestra ambos bancos como "Abierta", mostrar: "❌ Las conciliaciones ya están abiertas"
+       * **CRÍTICO**: Si el usuario pide "cerrar conciliaciones" y la consulta muestra ambos bancos como "Cerrada", mostrar: "❌ Las conciliaciones ya están cerradas"
+       * **CRÍTICO**: Solo proceder con la operación si el estado actual es diferente al estado solicitado
+       * Analizar si se refiere a caja o conciliaciones
+       * Si no está claro, preguntar: "¿Deseas gestionar caja o conciliaciones?"
       
              * Para ABRIR caja: 
          - **OBLIGATORIO**: Generar pregunta: "¿Cuál es el saldo inicial de la caja?"
