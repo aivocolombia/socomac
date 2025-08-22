@@ -147,15 +147,15 @@ class MessageProcessor:
             number_str = match.group(1)  # Captura solo el número
             number = int(number_str)
             
-            if number >= 1000:
-                new_number = number / 1000
+            if number >= 100:
+                new_number = number / 100
                 new_amount = f"${int(new_number)}" if new_number.is_integer() else f"${new_number}"
-                print(f"💰 Monto detectado: ${number} → Dividido por 1000 = {new_amount}")
+                print(f"💰 Monto detectado: ${number} → Dividido por 100 = {new_amount}")
                 return new_amount
             return full_match
         
-        # Aplicar la división por 1000 solo a montos de dinero ($ seguido de 4+ dígitos)
-        processed_text = re.sub(r'\$(\d{4,})', replace_money_amounts, text)
+        # Aplicar la división por 100 solo a montos de dinero ($ seguido de 3+ dígitos)
+        processed_text = re.sub(r'\$(\d{3,})', replace_money_amounts, text)
         
         if processed_text != text:
             print(f"✅ Texto procesado: '{text}' → '{processed_text}'")
@@ -172,7 +172,7 @@ class MessageProcessor:
         
         # Patrones para extraer información de transferencias
         patterns = {
-            'monto': r'\$(\d{4,})',
+            'monto': r'\$(\d{3,})',  # Cambiado a 3+ dígitos para capturar montos más pequeños
             'banco_origen': r'(?:banco|origen|desde|from)[:\s]*([A-Za-z\s]+)',
             'banco_destino': r'(?:destino|hacia|to|para)[:\s]*([A-Za-z\s]+)',
             'comprobante': r'(?:comprobante|referencia|número|numero)[:\s]*(\d+)',
@@ -188,8 +188,8 @@ class MessageProcessor:
         monto_match = re.search(patterns['monto'], text)
         if monto_match:
             original_monto = int(monto_match.group(1))
-            if original_monto >= 1000:
-                processed_monto = original_monto / 1000
+            if original_monto >= 100:
+                processed_monto = original_monto / 100
                 extracted_info['monto'] = f"${int(processed_monto)}" if processed_monto.is_integer() else f"${processed_monto}"
                 print(f"💰 Monto de transferencia detectado: ${original_monto} → Guardado en memoria como {extracted_info['monto']}")
             else:

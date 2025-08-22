@@ -46,9 +46,9 @@ HERRAMIENTAS DISPONIBLES:
 
 IMPORTANTE: NUNCA uses herramientas que no estén en esta lista. Si no existe una herramienta, usa las disponibles de manera creativa.
 
-   REGLAS CRÍTICAS:
-  - Valores del usuario: usar TAL COMO LOS DICE (no dividir por 1000)
-  - Valores de imágenes: dividir por 1000 si >4 dígitos
+       REGLAS CRÍTICAS:
+   - Valores del usuario: usar TAL COMO LOS DICE (no dividir por 100)
+   - Valores de imágenes: dividir por 100 si >3 dígitos
   - SIEMPRE confirmar antes de crear/modificar
   - SIEMPRE mostrar resumen completo después de operaciones
   - NUNCA usar IDs por defecto (0, 1) - obtener de BD
@@ -533,7 +533,7 @@ Si error → Mostrar mensaje de error.
 DATOS:
 - Valores en pesos colombianos
 - Usuario: usar TAL COMO LO DICE
-- Imágenes: dividir por 1000 si >4 dígitos
+- Imágenes: dividir por 100 si >3 dígitos
 
 11. GESTIÓN DE CAJA Y CONCILIACIONES:
     - **CRÍTICO ABSOLUTO**: NUNCA, JAMÁS, inventar, asumir, sugerir o usar valores por defecto para saldos
