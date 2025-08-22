@@ -79,8 +79,13 @@ class MessageProcessor:
         print(f"🔗 Link de imagen: {image_link}")
         extracted_text = self._process_image_file(image_link)
         
-        # Procesar el texto extraído para dividir valores grandes entre 1000
-        processed_text = self._process_image_values(extracted_text)
+        # Verificar si es información de transferencia y extraer datos relevantes
+        if any(keyword in extracted_text.lower() for keyword in ['transferencia', 'transfer', 'envío', 'envio', 'banco', 'comprobante']):
+            print("🏦 Detectada posible información de transferencia")
+            processed_text = self._extract_transfer_info(extracted_text)
+        else:
+            # Procesar el texto extraído para dividir valores grandes entre 1000
+            processed_text = self._process_image_values(extracted_text)
         
         print(f"📝 Texto final procesado: '{processed_text}'")
         return processed_text
@@ -158,6 +163,74 @@ class MessageProcessor:
             print("ℹ️ No se encontraron montos de dinero grandes para procesar")
         
         return processed_text
+    
+    def _extract_transfer_info(self, text: str) -> str:
+        """Extrae información específica de transferencias y la formatea"""
+        import re
+        
+        print(f"🏦 Analizando texto para información de transferencia: '{text}'")
+        
+        # Patrones para extraer información de transferencias
+        patterns = {
+            'monto': r'\$(\d{4,})',
+            'banco_origen': r'(?:banco|origen|desde|from)[:\s]*([A-Za-z\s]+)',
+            'banco_destino': r'(?:destino|hacia|to|para)[:\s]*([A-Za-z\s]+)',
+            'comprobante': r'(?:comprobante|referencia|número|numero)[:\s]*(\d+)',
+            'fecha': r'(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})',
+            'cuenta': r'(?:cuenta|account)[:\s]*(\d+)',
+            'transferencia': r'(transferencia|transfer|envío|envio)',
+        }
+        
+        extracted_info = {}
+        original_monto = None
+        
+        # Buscar monto y guardarlo en memoria
+        monto_match = re.search(patterns['monto'], text)
+        if monto_match:
+            original_monto = int(monto_match.group(1))
+            if original_monto >= 1000:
+                processed_monto = original_monto / 1000
+                extracted_info['monto'] = f"${int(processed_monto)}" if processed_monto.is_integer() else f"${processed_monto}"
+                print(f"💰 Monto de transferencia detectado: ${original_monto} → Guardado en memoria como {extracted_info['monto']}")
+            else:
+                extracted_info['monto'] = f"${original_monto}"
+        
+        # Buscar otros campos
+        for field, pattern in patterns.items():
+            if field != 'monto':
+                match = re.search(pattern, text, re.IGNORECASE)
+                if match:
+                    extracted_info[field] = match.group(1).strip()
+                    print(f"📋 {field.title()} detectado: {extracted_info[field]}")
+        
+        # Si se detectó información de transferencia, formatear el mensaje
+        if extracted_info:
+            transfer_message = "🏦 INFORMACIÓN DE TRANSFERENCIA DETECTADA:\n"
+            
+            if 'monto' in extracted_info:
+                transfer_message += f"💰 Monto: {extracted_info['monto']}\n"
+            
+            if 'banco_origen' in extracted_info:
+                transfer_message += f"🏦 Banco origen: {extracted_info['banco_origen']}\n"
+            
+            if 'banco_destino' in extracted_info:
+                transfer_message += f"🎯 Banco destino: {extracted_info['banco_destino']}\n"
+            
+            if 'comprobante' in extracted_info:
+                transfer_message += f"📄 Comprobante: {extracted_info['comprobante']}\n"
+            
+            if 'fecha' in extracted_info:
+                transfer_message += f"📅 Fecha: {extracted_info['fecha']}\n"
+            
+            if 'cuenta' in extracted_info:
+                transfer_message += f"💳 Cuenta: {extracted_info['cuenta']}\n"
+            
+            transfer_message += f"\n📝 Texto original extraído: {text}"
+            
+            print(f"✅ Información de transferencia extraída y formateada")
+            return transfer_message
+        
+        return text
     
     def process_unsupported_message(self, message_type: str) -> str:
         """Maneja tipos de mensaje no soportados"""
