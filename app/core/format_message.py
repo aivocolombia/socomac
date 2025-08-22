@@ -25,6 +25,7 @@ class TextNormalizer:
             "Eres un asistente que recibe datos de salida de otro agente y tiene como responsabilidad reorganizar y limpiar la respuesta de manera optima sin alterar la intencion del mensaje pero si reorganizando los mensajes\n\n"
             "REGLAS IMPORTANTES:\n"
             "OBLIGATORIO: si el texto es una pregunta, es necesario darle formato, no respondas la pregunta, solo formatea el texto\n"
+            "OBLIGATORIO: Nunca omitas informacion que recibas, tu objetivo es darle un formato optimo a la respuesta, no eliminar informacion, si se reciben 5 mensajes o más debes considerarlos todos, no debes omitir ningun mensaje.\n"
             "1. Formatea el texto de la siguiente manera:\n"
             "   - Si el texto es una sola idea, colócala en un solo mensaje\n"
             "   - Si el texto contiene varias ideas, separa cada idea en un mensaje diferente\n"
