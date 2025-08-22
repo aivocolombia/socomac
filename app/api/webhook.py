@@ -68,7 +68,7 @@ class MessageProcessor:
     
     def process_image_message(self, message_data: Dict[str, Any]) -> str:
         """Procesa mensajes de imagen y extrae texto usando OCR"""
-        print("🖼️ Mensaje de imagen recibido")
+        print("🖼️ IMAGEN RECIBIDA - Procesando imagen...")
         image_data = message_data.get("image", {})
         image_link = image_data.get("link")
         
@@ -77,7 +77,13 @@ class MessageProcessor:
             raise ValueError("No se pudo obtener el link de la imagen.")
         
         print(f"🔗 Link de imagen: {image_link}")
-        return self._process_image_file(image_link)
+        extracted_text = self._process_image_file(image_link)
+        
+        # Procesar el texto extraído para dividir valores grandes entre 1000
+        processed_text = self._process_image_values(extracted_text)
+        
+        print(f"📝 Texto final procesado: '{processed_text}'")
+        return processed_text
     
     def _process_audio_file(self, audio_link: str, audio_type: str) -> str:
         """Procesa un archivo de audio y retorna la transcripción"""
@@ -123,6 +129,35 @@ class MessageProcessor:
         except Exception as e:
             print(f"❌ Error procesando imagen: {e}")
             raise ValueError(f"Error procesando imagen: {str(e)}")
+    
+    def _process_image_values(self, text: str) -> str:
+        """Procesa montos de dinero extraídos de imágenes, dividiendo por 1000 si son >4 dígitos"""
+        import re
+        
+        print(f"🔢 Procesando montos de dinero en texto: '{text}'")
+        
+        # Buscar montos de dinero con signo $ seguido de números de 4 o más dígitos
+        def replace_money_amounts(match):
+            full_match = match.group(0)  # Captura todo el match incluyendo el $
+            number_str = match.group(1)  # Captura solo el número
+            number = int(number_str)
+            
+            if number >= 1000:
+                new_number = number / 1000
+                new_amount = f"${int(new_number)}" if new_number.is_integer() else f"${new_number}"
+                print(f"💰 Monto detectado: ${number} → Dividido por 1000 = {new_amount}")
+                return new_amount
+            return full_match
+        
+        # Aplicar la división por 1000 solo a montos de dinero ($ seguido de 4+ dígitos)
+        processed_text = re.sub(r'\$(\d{4,})', replace_money_amounts, text)
+        
+        if processed_text != text:
+            print(f"✅ Texto procesado: '{text}' → '{processed_text}'")
+        else:
+            print("ℹ️ No se encontraron montos de dinero grandes para procesar")
+        
+        return processed_text
     
     def process_unsupported_message(self, message_type: str) -> str:
         """Maneja tipos de mensaje no soportados"""
