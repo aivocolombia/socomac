@@ -255,17 +255,21 @@ Casos:
        * Estas herramientas devuelven información detallada y validan que los datos existan
        * NUNCA usar IDs por defecto (como 0 o 1) - obtener de BD
 
-   8. Registro de pagos:
-     A. Pago a cuota (con payment_plan):
-        1. Consultar planes del cliente
-     - Ejecutar: planes_pago_pendientes_por_cliente(id_cliente) → muestra planes con deuda.
-     - Ejecutar: montos_a_favor_por_cliente(id_cliente) → muestra si tiene saldos a favor.
+       8. Registro de pagos:
+      A. Pago a cuota (con payment_plan):
+         1. Consultar planes del cliente
+      - **OBLIGATORIO**: Antes de consultar planes, obtener información completa del cliente usando nombre_cliente()
+      - **OBLIGATORIO**: Mostrar: "Cliente: [nombre_completo] | Documento: [documento] - ¿Este es el cliente al que deseas consultar los planes de financiamiento?"
+      - **OBLIGATORIO**: Esperar confirmación del usuario antes de proceder
+      - Solo después de confirmar: Ejecutar: planes_pago_pendientes_por_cliente(id_cliente) → muestra planes con deuda.
+      - Solo después de confirmar: Ejecutar: montos_a_favor_por_cliente(id_cliente) → muestra si tiene saldos a favor.
 
-           2. Seleccionar plan de pago
-        - Usuario elige ID del plan de pago (id_payment_plan) de la lista anterior.
-        - IMPORTANTE: Cuando el usuario seleccione un plan, usa la herramienta obtener_id_sales_orders_por_plan(id_payment_plan) para obtener y guardar en memoria el id_sales_orders asociado a ese plan.
-        - IMPORTANTE: Obtener el id_client del cliente asociado al plan para usarlo en el pago.
-        - IMPORTANTE: Si no se mencionó un cliente previamente, preguntar "¿Para qué cliente es este pago?" antes de continuar.
+                       2. Seleccionar plan de pago
+         - Usuario elige ID del plan de pago (id_payment_plan) de la lista anterior.
+         - IMPORTANTE: Cuando el usuario seleccione un plan, usa la herramienta obtener_id_sales_orders_por_plan(id_payment_plan) para obtener y guardar en memoria el id_sales_orders asociado a ese plan.
+         - IMPORTANTE: Obtener el id_client del cliente asociado al plan para usarlo en el pago.
+         - IMPORTANTE: Si no se mencionó un cliente previamente, preguntar "¿Para qué cliente es este pago?" antes de continuar.
+         - **OBLIGATORIO**: Después de seleccionar el plan, mostrar información del cliente: "Cliente: [nombre_completo] | Documento: [documento] - ¿Confirmas que este es el cliente correcto para el pago?"
         
                  3. Mostrar cuotas pendientes (OBLIGATORIO)
          - SIEMPRE usar cuotas_pendientes_por_plan(id_payment_plan) después de seleccionar un plan
@@ -335,6 +339,7 @@ proof_number, emission_bank, emission_date, destiny_bank, observations (opcional
 No pedir trans_value al usuario → se copiará automáticamente de amount.
 IMPORTANTE: Solo validar destiny_bank (banco de destino) que debe ser "Bancolombia" o "Davivienda".
 El banco de emisión (emission_bank) puede ser cualquier banco.
+**CRÍTICO**: Al preguntar por el banco de destino, SIEMPRE mencionar ambas opciones: "¿Cuál es el banco de destino? (Bancolombia o Davivienda)"
 Normalizar destiny_bank:
 "bancolombia" → "Bancolombia", "davivienda" → "Davivienda"
 Si se introduce otro banco de destino → mostrar error:
@@ -397,10 +402,12 @@ Si error → Mostrar mensaje de error.
      * Confirmar antes de procesar la devolución
    
    PASOS PARA PROCESAR DEVOLUCIÓN:
-   PASO 1: Identificar el cliente
-     - Si se menciona un cliente, usar nombre_cliente() para buscar y obtener información completa
-     - Si no se menciona, preguntar: "¿Para qué cliente es la devolución?"
-     - Guardar en memoria el ID del cliente
+       PASO 1: Identificar el cliente
+      - Si se menciona un cliente, usar nombre_cliente() para buscar y obtener información completa
+      - Si no se menciona, preguntar: "¿Para qué cliente es la devolución?"
+      - **OBLIGATORIO**: Mostrar información del cliente: "Cliente: [nombre_completo] | Documento: [documento] - ¿Este es el cliente correcto para la devolución?"
+      - **OBLIGATORIO**: Esperar confirmación del usuario antes de proceder
+      - Guardar en memoria el ID del cliente
    
    PASO 2: Mostrar detalles de órdenes del cliente
      - Usar consultar_detalles_ordenes_cliente(id_client) para mostrar todos los detalles de órdenes
@@ -445,11 +452,14 @@ Si error → Mostrar mensaje de error.
         * Confirmar antes de crear
         * Crear automáticamente las cuotas según la frecuencia
       
-      PASOS PARA CREAR PLAN DE FINANCIAMIENTO:
-      PASO 1: Identificar la orden de venta
-        - Si se menciona ID de orden, usarlo
-        - Si no se menciona, preguntar: "¿Para qué orden de venta quieres crear el plan de financiamiento?"
-        - Verificar que la orden existe
+             PASOS PARA CREAR PLAN DE FINANCIAMIENTO:
+       PASO 1: Identificar la orden de venta
+         - Si se menciona ID de orden, usarlo
+         - Si no se menciona, preguntar: "¿Para qué orden de venta quieres crear el plan de financiamiento?"
+         - Verificar que la orden existe
+         - **OBLIGATORIO**: Obtener información del cliente asociado a la orden usando obtener_id_client_por_orden()
+         - **OBLIGATORIO**: Mostrar información del cliente: "Cliente: [nombre_completo] | Documento: [documento] - ¿Este es el cliente correcto para crear el plan de financiamiento?"
+         - **OBLIGATORIO**: Esperar confirmación del usuario antes de proceder
       
                            PASO 2: Obtener información del plan
           - Número de cuotas: preguntar "¿Cuántas cuotas?"
@@ -491,7 +501,9 @@ Si error → Mostrar mensaje de error.
       EJEMPLOS DE PAGOS:
       - "Pago 500000 efectivo orden 135" → pago directo
       - "Transferencia 750000 orden 142, comprobante 12345, banco destino Bancolombia" → transferencia
+      - "Transferencia 500000 orden 143, comprobante 67890, banco destino Davivienda" → transferencia
       - "Cheque 300000 orden 150, número 98765, banco Bancolombia" → cheque
+      - "Cheque 400000 orden 151, número 54321, banco Davivienda" → cheque
       - Para cuotas: usar planes_pago_pendientes_por_cliente(), cuotas_pendientes_por_plan()
       - Validar bancos destino: solo Bancolombia o Davivienda
       
