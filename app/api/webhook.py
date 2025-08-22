@@ -154,15 +154,8 @@ class ResponseSender:
         
         for item in respuestas:
             message = item["message"]
-            image_url = item["image"]
-            
-            if message and image_url:
-                send_image_message(phone=phone, image_url=image_url, caption=message, channel_id=channel_id)
-            else:
-                if message:
-                    send_whatsapp_message(phone=phone, message=message, channel_id=channel_id)
-                if image_url:
-                    send_image_message(phone=phone, image_url=image_url, caption="", channel_id=channel_id)
+            if message:
+                send_whatsapp_message(phone=phone, message=message, channel_id=channel_id)
 
 
 class WebhookHandler:
