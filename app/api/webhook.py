@@ -84,12 +84,17 @@ class MessageProcessor:
             print("🏦 Detectada posible información de transferencia")
             processed_text = self._extract_transfer_info(extracted_text)
         else:
-            # Procesar el texto extraído para dividir valores grandes entre 100
+            # Procesar el texto extraído para dividir valores grandes entre 1000
             print("💰 Procesando montos monetarios en imagen")
             processed_text = self._process_image_values(extracted_text)
         
-        print(f"📝 Texto final procesado: '{processed_text}'")
-        return processed_text
+        # SIEMPRE mostrar el monto después de analizar la imagen
+        if processed_text and processed_text != extracted_text:
+            print(f"📝 Texto final procesado: '{processed_text}'")
+            return f"IMAGEN RECIBIDA - Procesando imagen...\n\n{processed_text}"
+        else:
+            print(f"📝 Texto extraído sin cambios: '{extracted_text}'")
+            return f"IMAGEN RECIBIDA - Procesando imagen...\n\n{extracted_text}"
     
     def _process_audio_file(self, audio_link: str, audio_type: str) -> str:
         """Procesa un archivo de audio y retorna la transcripción"""
@@ -137,7 +142,7 @@ class MessageProcessor:
             raise ValueError(f"Error procesando imagen: {str(e)}")
     
     def _process_image_values(self, text: str) -> str:
-        """Procesa montos de dinero extraídos de imágenes, dividiendo por 1000 si son >3 dígitos"""
+        """Procesa montos de dinero extraídos de imágenes, dividiendo SIEMPRE por 1000"""
         import re
         
         print(f"🔢 Procesando montos de dinero en texto: '{text}'")
@@ -158,21 +163,18 @@ class MessageProcessor:
             
             print(f"🔍 Encontrado monto: ${number_str} → Limpiado: ${number}")
             
-            if number >= 1000:
-                new_number = number / 1000
-                new_amount = f"${int(new_number)}" if new_number.is_integer() else f"${new_number}"
-                print(f"💰 Monto procesado: ${number} → Dividido por 1000 = {new_amount}")
-                return new_amount
-            else:
-                print(f"ℹ️ Monto ${number} es menor a 100, no se procesa")
-            return full_match
+            # SIEMPRE dividir por 1000 todos los montos de imágenes
+            new_number = number / 1000
+            new_amount = f"${int(new_number)}" if new_number.is_integer() else f"${new_number}"
+            print(f"💰 Monto procesado: ${number} → Dividido por 1000 = {new_amount}")
+            return new_amount
         
-        # Aplicar la división por 1000 a montos de dinero ($ seguido de 3+ dígitos)
+        # Aplicar la división por 1000 a TODOS los montos de dinero de imágenes
         # También buscar variaciones como "pesos", "COP", etc.
         processed_text = re.sub(r'\$\s*([\d.]+(?:,\d{2})?)', replace_money_amounts, text)  # $ 1.200.000,00
         processed_text = re.sub(r'\$([\d.]+(?:,\d{2})?)', replace_money_amounts, processed_text)  # $1.200.000,00
-        processed_text = re.sub(r'(\d{3,})\s*(?:pesos?|COP|colombianos?)', lambda m: f"{int(m.group(1))/100} pesos", processed_text)
-        processed_text = re.sub(r'(\d{3,})\s*\$', lambda m: f"${int(m.group(1))/100}", processed_text)
+        processed_text = re.sub(r'(\d{3,})\s*(?:pesos?|COP|colombianos?)', lambda m: f"{int(m.group(1))/1000} pesos", processed_text)
+        processed_text = re.sub(r'(\d{3,})\s*\$', lambda m: f"${int(m.group(1))/1000}", processed_text)
         
         if processed_text != text:
             print(f"✅ Texto procesado: '{text}' → '{processed_text}'")
@@ -217,12 +219,10 @@ class MessageProcessor:
             
             print(f"🔍 Monto de transferencia detectado: ${number_str} → Limpiado: ${original_monto}")
             
-            if original_monto >= 1000:
-                processed_monto = original_monto / 1000
-                extracted_info['monto'] = f"${int(processed_monto)}" if processed_monto.is_integer() else f"${processed_monto}"
-                print(f"💰 Monto procesado: ${original_monto} → Guardado en memoria como {extracted_info['monto']}")
-            else:
-                extracted_info['monto'] = f"${original_monto}"
+            # SIEMPRE dividir por 1000 todos los montos de imágenes
+            processed_monto = original_monto / 1000
+            extracted_info['monto'] = f"${int(processed_monto)}" if processed_monto.is_integer() else f"${processed_monto}"
+            print(f"💰 Monto procesado: ${original_monto} → Guardado en memoria como {extracted_info['monto']}")
         
         # Buscar otros campos
         for field, pattern in patterns.items():
