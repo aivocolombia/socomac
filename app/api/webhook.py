@@ -146,9 +146,16 @@ class MessageProcessor:
         def replace_money_amounts(match):
             full_match = match.group(0)  # Captura todo el match incluyendo el $
             number_str = match.group(1)  # Captura solo el número
-            number = int(number_str)
             
-            print(f"🔍 Encontrado monto: ${number}")
+            # Limpiar el número: remover comas y puntos decimales
+            clean_number = number_str.replace(',', '')  # Remover comas de miles
+            if '.' in clean_number:
+                # Si hay punto decimal, solo tomar la parte entera
+                clean_number = clean_number.split('.')[0]
+            
+            number = int(clean_number)
+            
+            print(f"🔍 Encontrado monto: ${number_str} → Limpiado: ${number}")
             
             if number >= 100:
                 new_number = number / 100
@@ -161,8 +168,8 @@ class MessageProcessor:
         
         # Aplicar la división por 100 a montos de dinero ($ seguido de 3+ dígitos)
         # También buscar variaciones como "pesos", "COP", etc.
-        processed_text = re.sub(r'\$\s*(\d{3,})', replace_money_amounts, text)  # $ 5000
-        processed_text = re.sub(r'\$(\d{3,})', replace_money_amounts, processed_text)  # $5000
+        processed_text = re.sub(r'\$\s*([\d,]+(?:\.\d{2})?)', replace_money_amounts, text)  # $ 350,000.00
+        processed_text = re.sub(r'\$([\d,]+(?:\.\d{2})?)', replace_money_amounts, processed_text)  # $350,000.00
         processed_text = re.sub(r'(\d{3,})\s*(?:pesos?|COP|colombianos?)', lambda m: f"{int(m.group(1))/100} pesos", processed_text)
         processed_text = re.sub(r'(\d{3,})\s*\$', lambda m: f"${int(m.group(1))/100}", processed_text)
         
@@ -181,7 +188,7 @@ class MessageProcessor:
         
         # Patrones para extraer información de transferencias
         patterns = {
-            'monto': r'\$\s*(\d{3,})',  # $ 5000 o $5000
+            'monto': r'\$\s*([\d,]+(?:\.\d{2})?)',  # $ 350,000.00 o $350,000.00
             'banco_origen': r'(?:banco|origen|desde|from)[:\s]*([A-Za-z\s]+)',
             'banco_destino': r'(?:destino|hacia|to|para)[:\s]*([A-Za-z\s]+)',
             'comprobante': r'(?:comprobante|referencia|número|numero)[:\s]*(\d+)',
@@ -196,11 +203,22 @@ class MessageProcessor:
         # Buscar monto y guardarlo en memoria
         monto_match = re.search(patterns['monto'], text)
         if monto_match:
-            original_monto = int(monto_match.group(1))
+            number_str = monto_match.group(1)
+            
+            # Limpiar el número: remover comas y puntos decimales
+            clean_number = number_str.replace(',', '')  # Remover comas de miles
+            if '.' in clean_number:
+                # Si hay punto decimal, solo tomar la parte entera
+                clean_number = clean_number.split('.')[0]
+            
+            original_monto = int(clean_number)
+            
+            print(f"🔍 Monto de transferencia detectado: ${number_str} → Limpiado: ${original_monto}")
+            
             if original_monto >= 100:
                 processed_monto = original_monto / 100
                 extracted_info['monto'] = f"${int(processed_monto)}" if processed_monto.is_integer() else f"${processed_monto}"
-                print(f"💰 Monto de transferencia detectado: ${original_monto} → Guardado en memoria como {extracted_info['monto']}")
+                print(f"💰 Monto procesado: ${original_monto} → Guardado en memoria como {extracted_info['monto']}")
             else:
                 extracted_info['monto'] = f"${original_monto}"
         
