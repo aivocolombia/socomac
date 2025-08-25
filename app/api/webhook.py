@@ -147,11 +147,12 @@ class MessageProcessor:
             full_match = match.group(0)  # Captura todo el match incluyendo el $
             number_str = match.group(1)  # Captura solo el número
             
-            # Limpiar el número: remover comas y puntos decimales
-            clean_number = number_str.replace(',', '')  # Remover comas de miles
-            if '.' in clean_number:
-                # Si hay punto decimal, solo tomar la parte entera
-                clean_number = clean_number.split('.')[0]
+            # Limpiar el número: manejar formato colombiano (punto = miles, coma = decimal)
+            # Ejemplo: 1.200.000,00 → 1200000
+            clean_number = number_str.replace('.', '')  # Remover puntos de miles
+            if ',' in clean_number:
+                # Si hay coma decimal, solo tomar la parte entera
+                clean_number = clean_number.split(',')[0]
             
             number = int(clean_number)
             
@@ -168,8 +169,8 @@ class MessageProcessor:
         
         # Aplicar la división por 100 a montos de dinero ($ seguido de 3+ dígitos)
         # También buscar variaciones como "pesos", "COP", etc.
-        processed_text = re.sub(r'\$\s*([\d,]+(?:\.\d{2})?)', replace_money_amounts, text)  # $ 350,000.00
-        processed_text = re.sub(r'\$([\d,]+(?:\.\d{2})?)', replace_money_amounts, processed_text)  # $350,000.00
+        processed_text = re.sub(r'\$\s*([\d.]+(?:,\d{2})?)', replace_money_amounts, text)  # $ 1.200.000,00
+        processed_text = re.sub(r'\$([\d.]+(?:,\d{2})?)', replace_money_amounts, processed_text)  # $1.200.000,00
         processed_text = re.sub(r'(\d{3,})\s*(?:pesos?|COP|colombianos?)', lambda m: f"{int(m.group(1))/100} pesos", processed_text)
         processed_text = re.sub(r'(\d{3,})\s*\$', lambda m: f"${int(m.group(1))/100}", processed_text)
         
@@ -188,7 +189,7 @@ class MessageProcessor:
         
         # Patrones para extraer información de transferencias
         patterns = {
-            'monto': r'\$\s*([\d,]+(?:\.\d{2})?)',  # $ 350,000.00 o $350,000.00
+            'monto': r'\$\s*([\d.]+(?:,\d{2})?)',  # $ 1.200.000,00 o $1.200.000,00
             'banco_origen': r'(?:banco|origen|desde|from)[:\s]*([A-Za-z\s]+)',
             'banco_destino': r'(?:destino|hacia|to|para)[:\s]*([A-Za-z\s]+)',
             'comprobante': r'(?:comprobante|referencia|número|numero)[:\s]*(\d+)',
@@ -205,11 +206,12 @@ class MessageProcessor:
         if monto_match:
             number_str = monto_match.group(1)
             
-            # Limpiar el número: remover comas y puntos decimales
-            clean_number = number_str.replace(',', '')  # Remover comas de miles
-            if '.' in clean_number:
-                # Si hay punto decimal, solo tomar la parte entera
-                clean_number = clean_number.split('.')[0]
+            # Limpiar el número: manejar formato colombiano (punto = miles, coma = decimal)
+            # Ejemplo: 1.200.000,00 → 1200000
+            clean_number = number_str.replace('.', '')  # Remover puntos de miles
+            if ',' in clean_number:
+                # Si hay coma decimal, solo tomar la parte entera
+                clean_number = clean_number.split(',')[0]
             
             original_monto = int(clean_number)
             
