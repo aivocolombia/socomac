@@ -137,7 +137,7 @@ class MessageProcessor:
             raise ValueError(f"Error procesando imagen: {str(e)}")
     
     def _process_image_values(self, text: str) -> str:
-        """Procesa montos de dinero extraídos de imágenes, dividiendo por 100 si son >3 dígitos"""
+        """Procesa montos de dinero extraídos de imágenes, dividiendo por 1000 si son >3 dígitos"""
         import re
         
         print(f"🔢 Procesando montos de dinero en texto: '{text}'")
@@ -158,16 +158,16 @@ class MessageProcessor:
             
             print(f"🔍 Encontrado monto: ${number_str} → Limpiado: ${number}")
             
-            if number >= 100:
-                new_number = number / 100
+            if number >= 1000:
+                new_number = number / 1000
                 new_amount = f"${int(new_number)}" if new_number.is_integer() else f"${new_number}"
-                print(f"💰 Monto procesado: ${number} → Dividido por 100 = {new_amount}")
+                print(f"💰 Monto procesado: ${number} → Dividido por 1000 = {new_amount}")
                 return new_amount
             else:
                 print(f"ℹ️ Monto ${number} es menor a 100, no se procesa")
             return full_match
         
-        # Aplicar la división por 100 a montos de dinero ($ seguido de 3+ dígitos)
+        # Aplicar la división por 1000 a montos de dinero ($ seguido de 3+ dígitos)
         # También buscar variaciones como "pesos", "COP", etc.
         processed_text = re.sub(r'\$\s*([\d.]+(?:,\d{2})?)', replace_money_amounts, text)  # $ 1.200.000,00
         processed_text = re.sub(r'\$([\d.]+(?:,\d{2})?)', replace_money_amounts, processed_text)  # $1.200.000,00
@@ -217,8 +217,8 @@ class MessageProcessor:
             
             print(f"🔍 Monto de transferencia detectado: ${number_str} → Limpiado: ${original_monto}")
             
-            if original_monto >= 100:
-                processed_monto = original_monto / 100
+            if original_monto >= 1000:
+                processed_monto = original_monto / 1000
                 extracted_info['monto'] = f"${int(processed_monto)}" if processed_monto.is_integer() else f"${processed_monto}"
                 print(f"💰 Monto procesado: ${original_monto} → Guardado en memoria como {extracted_info['monto']}")
             else:
