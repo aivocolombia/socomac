@@ -84,7 +84,8 @@ class MessageProcessor:
             print("🏦 Detectada posible información de transferencia")
             processed_text = self._extract_transfer_info(extracted_text)
         else:
-            # Procesar el texto extraído para dividir valores grandes entre 1000
+            # Procesar el texto extraído para dividir valores grandes entre 100
+            print("💰 Procesando montos monetarios en imagen")
             processed_text = self._process_image_values(extracted_text)
         
         print(f"📝 Texto final procesado: '{processed_text}'")
@@ -136,26 +137,34 @@ class MessageProcessor:
             raise ValueError(f"Error procesando imagen: {str(e)}")
     
     def _process_image_values(self, text: str) -> str:
-        """Procesa montos de dinero extraídos de imágenes, dividiendo por 1000 si son >4 dígitos"""
+        """Procesa montos de dinero extraídos de imágenes, dividiendo por 100 si son >3 dígitos"""
         import re
         
         print(f"🔢 Procesando montos de dinero en texto: '{text}'")
         
-        # Buscar montos de dinero con signo $ seguido de números de 4 o más dígitos
+        # Buscar montos de dinero con signo $ seguido de números de 3 o más dígitos
         def replace_money_amounts(match):
             full_match = match.group(0)  # Captura todo el match incluyendo el $
             number_str = match.group(1)  # Captura solo el número
             number = int(number_str)
             
+            print(f"🔍 Encontrado monto: ${number}")
+            
             if number >= 100:
                 new_number = number / 100
                 new_amount = f"${int(new_number)}" if new_number.is_integer() else f"${new_number}"
-                print(f"💰 Monto detectado: ${number} → Dividido por 100 = {new_amount}")
+                print(f"💰 Monto procesado: ${number} → Dividido por 100 = {new_amount}")
                 return new_amount
+            else:
+                print(f"ℹ️ Monto ${number} es menor a 100, no se procesa")
             return full_match
         
-        # Aplicar la división por 100 solo a montos de dinero ($ seguido de 3+ dígitos)
-        processed_text = re.sub(r'\$(\d{3,})', replace_money_amounts, text)
+        # Aplicar la división por 100 a montos de dinero ($ seguido de 3+ dígitos)
+        # También buscar variaciones como "pesos", "COP", etc.
+        processed_text = re.sub(r'\$\s*(\d{3,})', replace_money_amounts, text)  # $ 5000
+        processed_text = re.sub(r'\$(\d{3,})', replace_money_amounts, processed_text)  # $5000
+        processed_text = re.sub(r'(\d{3,})\s*(?:pesos?|COP|colombianos?)', lambda m: f"{int(m.group(1))/100} pesos", processed_text)
+        processed_text = re.sub(r'(\d{3,})\s*\$', lambda m: f"${int(m.group(1))/100}", processed_text)
         
         if processed_text != text:
             print(f"✅ Texto procesado: '{text}' → '{processed_text}'")
@@ -172,7 +181,7 @@ class MessageProcessor:
         
         # Patrones para extraer información de transferencias
         patterns = {
-            'monto': r'\$(\d{3,})',  # Cambiado a 3+ dígitos para capturar montos más pequeños
+            'monto': r'\$\s*(\d{3,})',  # $ 5000 o $5000
             'banco_origen': r'(?:banco|origen|desde|from)[:\s]*([A-Za-z\s]+)',
             'banco_destino': r'(?:destino|hacia|to|para)[:\s]*([A-Za-z\s]+)',
             'comprobante': r'(?:comprobante|referencia|número|numero)[:\s]*(\d+)',
