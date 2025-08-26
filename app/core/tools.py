@@ -3,6 +3,7 @@ from langchain.tools import tool
 from app.data.questions import question_list
 from app.db.respositories import get_db_connection
 from app.db.mongo import MongoChatMessageHistory
+from app.db.supabase import get_supabase_client
 
 @tool
 def limpiar_memoria(phone: str) -> str:
@@ -1773,5 +1774,537 @@ def gestionar_caja_conciliaciones(accion: str, tipo: str, saldo_caja: float = No
     except Exception as e:
         print(f"❌ Error en gestionar_caja_conciliaciones: {str(e)}")
         return f"❌ Error al gestionar {tipo}: {str(e)}"
+
+@tool
+def consultar_usuario_autorizado(phone: str) -> str:
+    """
+    Consulta si un número de teléfono está autorizado para usar el agente desde la tabla users_agent en Supabase.
+    Verifica el tipo de usuario (Administrador o Secundario) y su estado activo.
+    
+    Args:
+        phone (str): Número de teléfono a consultar (formato: 573195792747)
+        
+    Returns:
+        str: Información del usuario autorizado o mensaje de no autorizado
+    """
+    try:
+        print(f"🔍 Consultando autorización para teléfono: {phone}")
+        
+        # Validar formato del teléfono
+        if not phone or not phone.isdigit() or len(phone) < 10:
+            return "❌ Formato de teléfono inválido. Debe ser un número de al menos 10 dígitos."
+        
+        # Conectar a Supabase
+        supabase = get_supabase_client()
+        
+        # Consultar en la tabla users_agent
+        response = supabase.table("users_agent").select(
+            "phone, name, type, status"
+        ).eq("phone", phone).execute()
+        
+        if not response.data:
+            print(f"❌ Usuario no encontrado para teléfono: {phone}")
+            return f"❌ El número {phone} no está autorizado para usar el agente."
+        
+        user_data = response.data[0]
+        phone_db = user_data.get("phone")
+        name = user_data.get("name", "Sin nombre")
+        user_type = user_data.get("type")
+        status = user_data.get("status")
+        
+        print(f"✅ Usuario encontrado: {name} - Tipo: {user_type} - Status: {status}")
+        
+        # Verificar si el usuario está activo
+        if not status:
+            return f"❌ El usuario {name} ({phone}) no está activo en el sistema."
+        
+        # Construir respuesta según el tipo de usuario
+        if user_type == "Administrador":
+            return (
+                f"✅ USUARIO AUTORIZADO - ADMINISTRADOR\n"
+                f"👤 Nombre: {name}\n"
+                f"📞 Teléfono: {phone}\n"
+                f"🔑 Tipo: {user_type}\n"
+                f"🟢 Estado: Activo\n"
+                f"💬 Acceso completo al agente"
+            )
+        elif user_type == "Secundario":
+            return (
+                f"✅ USUARIO AUTORIZADO - SECUNDARIO\n"
+                f"👤 Nombre: {name}\n"
+                f"📞 Teléfono: {phone}\n"
+                f"🔑 Tipo: {user_type}\n"
+                f"🟢 Estado: Activo\n"
+                f"💬 Acceso limitado al agente (asignado por administrador)"
+            )
+        else:
+            return (
+                f"⚠️ USUARIO CON TIPO DESCONOCIDO\n"
+                f"👤 Nombre: {name}\n"
+                f"📞 Teléfono: {phone}\n"
+                f"🔑 Tipo: {user_type}\n"
+                f"🟢 Estado: Activo\n"
+                f"❓ Tipo de usuario no reconocido"
+            )
+        
+    except Exception as e:
+        error_msg = f"❌ Error al consultar usuario autorizado: {str(e)}"
+        print(f"❌ {error_msg}")
+        return error_msg
+
+@tool
+def listar_usuarios_autorizados() -> str:
+    """
+    Lista todos los usuarios autorizados en la tabla users_agent de Supabase.
+    Muestra información de administradores y usuarios secundarios activos.
+    
+    Returns:
+        str: Lista de todos los usuarios autorizados con su información
+    """
+    try:
+        print("🔍 Listando todos los usuarios autorizados")
+        
+        # Conectar a Supabase
+        supabase = get_supabase_client()
+        
+        # Consultar todos los usuarios activos
+        response = supabase.table("users_agent").select(
+            "phone, name, type, status"
+        ).eq("status", True).order("type", desc=False).execute()
+        
+        if not response.data:
+            return "❌ No se encontraron usuarios autorizados en el sistema."
+        
+        users = response.data
+        print(f"✅ Encontrados {len(users)} usuarios autorizados")
+        
+        # Separar por tipo
+        administradores = [user for user in users if user.get("type") == "Administrador"]
+        secundarios = [user for user in users if user.get("type") == "Secundario"]
+        otros = [user for user in users if user.get("type") not in ["Administrador", "Secundario"]]
+        
+        # Construir respuesta
+        respuesta = ["📋 LISTA DE USUARIOS AUTORIZADOS"]
+        respuesta.append("=" * 50)
+        
+        if administradores:
+            respuesta.append(f"\n👑 ADMINISTRADORES ({len(administradores)}):")
+            for user in administradores:
+                respuesta.append(f"  👤 {user.get('name', 'Sin nombre')}")
+                respuesta.append(f"  📞 {user.get('phone')}")
+                respuesta.append("  🔑 Tipo: Administrador")
+                respuesta.append("  🟢 Estado: Activo")
+                respuesta.append("  " + "-" * 30)
+        
+        if secundarios:
+            respuesta.append(f"\n👥 USUARIOS SECUNDARIOS ({len(secundarios)}):")
+            for user in secundarios:
+                respuesta.append(f"  👤 {user.get('name', 'Sin nombre')}")
+                respuesta.append(f"  📞 {user.get('phone')}")
+                respuesta.append("  🔑 Tipo: Secundario")
+                respuesta.append("  🟢 Estado: Activo")
+                respuesta.append("  " + "-" * 30)
+        
+        if otros:
+            respuesta.append(f"\n❓ OTROS TIPOS ({len(otros)}):")
+            for user in otros:
+                respuesta.append(f"  👤 {user.get('name', 'Sin nombre')}")
+                respuesta.append(f"  📞 {user.get('phone')}")
+                respuesta.append(f"  🔑 Tipo: {user.get('type', 'Desconocido')}")
+                respuesta.append("  🟢 Estado: Activo")
+                respuesta.append("  " + "-" * 30)
+        
+        respuesta.append(f"\n📊 RESUMEN:")
+        respuesta.append(f"  • Total de usuarios activos: {len(users)}")
+        respuesta.append(f"  • Administradores: {len(administradores)}")
+        respuesta.append(f"  • Usuarios secundarios: {len(secundarios)}")
+        respuesta.append(f"  • Otros tipos: {len(otros)}")
+        
+        return "\n".join(respuesta)
+        
+    except Exception as e:
+        error_msg = f"❌ Error al listar usuarios autorizados: {str(e)}"
+        print(f"❌ {error_msg}")
+        return error_msg
+
+@tool
+def asignar_usuario_secundario(nombre: str, telefono: str, asignado_por: str) -> str:
+    """
+    Asigna un nuevo usuario secundario al agente. Solo los administradores pueden usar esta herramienta.
+    Crea un nuevo registro en la tabla users_agent con tipo 'Secundario' y status activo.
+    
+    Args:
+        nombre (str): Nombre completo del usuario a asignar
+        telefono (str): Número de teléfono del usuario (formato: 573195792747)
+        asignado_por (str): Número de teléfono del administrador que hace la asignación
+        
+    Returns:
+        str: Confirmación de la asignación o mensaje de error
+    """
+    try:
+        print(f"👤 Asignando usuario secundario: {nombre} - {telefono}")
+        print(f"🔑 Asignado por administrador: {asignado_por}")
+        
+        # Validar que quien asigna sea administrador
+        supabase = get_supabase_client()
+        
+        # Verificar que el asignador sea administrador
+        admin_check = supabase.table("users_agent").select(
+            "type, status"
+        ).eq("phone", asignado_por).execute()
+        
+        if not admin_check.data:
+            return f"❌ Error: El número {asignado_por} no está registrado en el sistema."
+        
+        admin_data = admin_check.data[0]
+        if admin_data.get("type") != "Administrador":
+            return f"❌ Error: Solo los administradores pueden asignar usuarios secundarios."
+        
+        if not admin_data.get("status"):
+            return f"❌ Error: El administrador no está activo en el sistema."
+        
+        # Validar formato del teléfono
+        if not telefono or not telefono.isdigit() or len(telefono) < 10:
+            return "❌ Formato de teléfono inválido. Debe ser un número de al menos 10 dígitos."
+        
+        # Verificar si el usuario ya existe
+        existing_user = supabase.table("users_agent").select(
+            "phone, name, type, status"
+        ).eq("phone", telefono).execute()
+        
+        if existing_user.data:
+            user_data = existing_user.data[0]
+            if user_data.get("status"):
+                return f"❌ El número {telefono} ya está registrado como usuario activo: {user_data.get('name')} ({user_data.get('type')})"
+            else:
+                # Si existe pero está inactivo, reactivarlo como secundario
+                supabase.table("users_agent").update({
+                    "name": nombre,
+                    "type": "Secundario",
+                    "status": True
+                }).eq("phone", telefono).execute()
+                
+                return (
+                    f"✅ Usuario reactivado exitosamente.\n"
+                    f"👤 Nombre: {nombre}\n"
+                    f"📞 Teléfono: {telefono}\n"
+                    f"🔑 Tipo: Secundario\n"
+                    f"🟢 Estado: Activo\n"
+                    f"👑 Asignado por: {asignado_por}\n"
+                    f"💬 El usuario ahora puede interactuar con el agente"
+                )
+        
+        # Crear nuevo usuario secundario
+        new_user = {
+            "phone": telefono,
+            "name": nombre,
+            "type": "Secundario",
+            "status": True
+        }
+        
+        supabase.table("users_agent").insert(new_user).execute()
+        
+        return (
+            f"✅ Usuario secundario asignado exitosamente.\n"
+            f"👤 Nombre: {nombre}\n"
+            f"📞 Teléfono: {telefono}\n"
+            f"🔑 Tipo: Secundario\n"
+            f"🟢 Estado: Activo\n"
+            f"👑 Asignado por: {asignado_por}\n"
+            f"💬 El usuario ahora puede interactuar con el agente"
+        )
+        
+    except Exception as e:
+        error_msg = f"❌ Error al asignar usuario secundario: {str(e)}"
+        print(f"❌ {error_msg}")
+        return error_msg
+
+@tool
+def buscar_usuario_por_nombre(nombre: str) -> str:
+    """
+    Busca usuarios en la tabla users_agent por nombre (búsqueda flexible).
+    
+    Args:
+        nombre (str): Nombre o parte del nombre del usuario a buscar
+        
+    Returns:
+        str: Información de los usuarios encontrados
+    """
+    try:
+        print(f"🔍 Buscando usuario por nombre: '{nombre}'")
+        
+        if not nombre or not nombre.strip():
+            return "❌ Debes proporcionar un nombre para buscar."
+        
+        supabase = get_supabase_client()
+        
+        # Búsqueda flexible por nombre (ILIKE para PostgreSQL)
+        response = supabase.table("users_agent").select(
+            "phone, name, type, status"
+        ).ilike("name", f"%{nombre.strip()}%").execute()
+        
+        if not response.data:
+            return f"❌ No se encontraron usuarios con el nombre '{nombre}'."
+        
+        users = response.data
+        print(f"✅ Encontrados {len(users)} usuarios")
+        
+        # Construir respuesta
+        respuesta = [f"🔍 RESULTADOS DE BÚSQUEDA: '{nombre}'"]
+        respuesta.append("=" * 50)
+        
+        for user in users:
+            phone = user.get("phone")
+            name = user.get("name", "Sin nombre")
+            user_type = user.get("type")
+            status = user.get("status")
+            
+            estado_emoji = "🟢" if status else "🔴"
+            estado_texto = "Activo" if status else "Inactivo"
+            
+            respuesta.append(f"\n{estado_emoji} {name}")
+            respuesta.append(f"📞 Teléfono: {phone}")
+            respuesta.append(f"🔑 Tipo: {user_type}")
+            respuesta.append(f"📊 Estado: {estado_texto}")
+            respuesta.append("-" * 30)
+        
+        respuesta.append(f"\n📊 Total encontrados: {len(users)}")
+        
+        return "\n".join(respuesta)
+        
+    except Exception as e:
+        error_msg = f"❌ Error al buscar usuario por nombre: {str(e)}"
+        print(f"❌ {error_msg}")
+        return error_msg
+
+@tool
+def cambiar_status_usuario(telefono: str, nuevo_status: bool, modificado_por: str) -> str:
+    """
+    Cambia el status de un usuario (activar/desactivar). Solo los administradores pueden usar esta herramienta.
+    
+    Args:
+        telefono (str): Número de teléfono del usuario a modificar
+        nuevo_status (bool): True para activar, False para desactivar
+        modificado_por (str): Número de teléfono del administrador que hace el cambio
+        
+    Returns:
+        str: Confirmación del cambio o mensaje de error
+    """
+    try:
+        print(f"🔄 Cambiando status de usuario: {telefono} -> {nuevo_status}")
+        print(f"🔑 Modificado por administrador: {modificado_por}")
+        
+        # Validar que quien modifica sea administrador
+        supabase = get_supabase_client()
+        
+        # Verificar que el modificador sea administrador
+        admin_check = supabase.table("users_agent").select(
+            "type, status"
+        ).eq("phone", modificado_por).execute()
+        
+        if not admin_check.data:
+            return f"❌ Error: El número {modificado_por} no está registrado en el sistema."
+        
+        admin_data = admin_check.data[0]
+        if admin_data.get("type") != "Administrador":
+            return f"❌ Error: Solo los administradores pueden cambiar el status de usuarios."
+        
+        if not admin_data.get("status"):
+            return f"❌ Error: El administrador no está activo en el sistema."
+        
+        # Verificar que el usuario existe
+        user_check = supabase.table("users_agent").select(
+            "phone, name, type, status"
+        ).eq("phone", telefono).execute()
+        
+        if not user_check.data:
+            return f"❌ Error: El usuario con teléfono {telefono} no existe en el sistema."
+        
+        user_data = user_check.data[0]
+        current_status = user_data.get("status")
+        user_name = user_data.get("name", "Sin nombre")
+        user_type = user_data.get("type")
+        
+        # No permitir desactivar administradores
+        if user_type == "Administrador" and not nuevo_status:
+            return f"❌ Error: No se puede desactivar un usuario administrador."
+        
+        # Si el status ya es el mismo, no hacer nada
+        if current_status == nuevo_status:
+            status_texto = "Activo" if nuevo_status else "Inactivo"
+            return f"ℹ️ El usuario {user_name} ({telefono}) ya está {status_texto.lower()}."
+        
+        # Actualizar el status
+        supabase.table("users_agent").update({
+            "status": nuevo_status
+        }).eq("phone", telefono).execute()
+        
+        # Construir mensaje de confirmación
+        status_texto = "activado" if nuevo_status else "desactivado"
+        accion_texto = "puede" if nuevo_status else "ya no puede"
+        
+        return (
+            f"✅ Usuario {status_texto} exitosamente.\n"
+            f"👤 Nombre: {user_name}\n"
+            f"📞 Teléfono: {telefono}\n"
+            f"🔑 Tipo: {user_type}\n"
+            f"📊 Estado: {'Activo' if nuevo_status else 'Inactivo'}\n"
+            f"👑 Modificado por: {modificado_por}\n"
+            f"💬 El usuario {accion_texto} interactuar con el agente"
+        )
+        
+    except Exception as e:
+        error_msg = f"❌ Error al cambiar status de usuario: {str(e)}"
+        print(f"❌ {error_msg}")
+        return error_msg
+
+@tool
+def cambiar_tipo_usuario(telefono: str, nuevo_tipo: str, modificado_por: str) -> str:
+    """
+    Cambia el tipo de usuario (Administrador/Secundario). Solo los administradores pueden usar esta herramienta.
+    
+    Args:
+        telefono (str): Número de teléfono del usuario a modificar
+        nuevo_tipo (str): Nuevo tipo ("Administrador" o "Secundario")
+        modificado_por (str): Número de teléfono del administrador que hace el cambio
+        
+    Returns:
+        str: Confirmación del cambio o mensaje de error
+    """
+    try:
+        print(f"🔄 Cambiando tipo de usuario: {telefono} -> {nuevo_tipo}")
+        print(f"🔑 Modificado por administrador: {modificado_por}")
+        
+        # Validar tipo
+        if nuevo_tipo not in ["Administrador", "Secundario"]:
+            return "❌ Error: El tipo debe ser 'Administrador' o 'Secundario'."
+        
+        # Validar que quien modifica sea administrador
+        supabase = get_supabase_client()
+        
+        # Verificar que el modificador sea administrador
+        admin_check = supabase.table("users_agent").select(
+            "type, status"
+        ).eq("phone", modificado_por).execute()
+        
+        if not admin_check.data:
+            return f"❌ Error: El número {modificado_por} no está registrado en el sistema."
+        
+        admin_data = admin_check.data[0]
+        if admin_data.get("type") != "Administrador":
+            return f"❌ Error: Solo los administradores pueden cambiar el tipo de usuarios."
+        
+        if not admin_data.get("status"):
+            return f"❌ Error: El administrador no está activo en el sistema."
+        
+        # Verificar que el usuario existe
+        user_check = supabase.table("users_agent").select(
+            "phone, name, type, status"
+        ).eq("phone", telefono).execute()
+        
+        if not user_check.data:
+            return f"❌ Error: El usuario con teléfono {telefono} no existe en el sistema."
+        
+        user_data = user_check.data[0]
+        current_type = user_data.get("type")
+        user_name = user_data.get("name", "Sin nombre")
+        
+        # Si el tipo ya es el mismo, no hacer nada
+        if current_type == nuevo_tipo:
+            return f"ℹ️ El usuario {user_name} ({telefono}) ya es de tipo {nuevo_tipo}."
+        
+        # Actualizar el tipo
+        supabase.table("users_agent").update({
+            "type": nuevo_tipo
+        }).eq("phone", telefono).execute()
+        
+        return (
+            f"✅ Tipo de usuario cambiado exitosamente.\n"
+            f"👤 Nombre: {user_name}\n"
+            f"📞 Teléfono: {telefono}\n"
+            f"🔑 Tipo anterior: {current_type}\n"
+            f"🔑 Tipo nuevo: {nuevo_tipo}\n"
+            f"👑 Modificado por: {modificado_por}\n"
+            f"💬 El usuario ahora tiene permisos de {nuevo_tipo.lower()}"
+        )
+        
+    except Exception as e:
+        error_msg = f"❌ Error al cambiar tipo de usuario: {str(e)}"
+        print(f"❌ {error_msg}")
+        return error_msg
+
+@tool
+def eliminar_usuario_secundario(telefono: str, eliminado_por: str) -> str:
+    """
+    Elimina un usuario secundario del sistema (cambia status a False). Solo los administradores pueden usar esta herramienta.
+    
+    Args:
+        telefono (str): Número de teléfono del usuario a eliminar
+        eliminado_por (str): Número de teléfono del administrador que hace la eliminación
+        
+    Returns:
+        str: Confirmación de la eliminación o mensaje de error
+    """
+    try:
+        print(f"🗑️ Eliminando usuario secundario: {telefono}")
+        print(f"🔑 Eliminado por administrador: {eliminado_por}")
+        
+        # Validar que quien elimina sea administrador
+        supabase = get_supabase_client()
+        
+        # Verificar que el eliminador sea administrador
+        admin_check = supabase.table("users_agent").select(
+            "type, status"
+        ).eq("phone", eliminado_por).execute()
+        
+        if not admin_check.data:
+            return f"❌ Error: El número {eliminado_por} no está registrado en el sistema."
+        
+        admin_data = admin_check.data[0]
+        if admin_data.get("type") != "Administrador":
+            return f"❌ Error: Solo los administradores pueden eliminar usuarios."
+        
+        if not admin_data.get("status"):
+            return f"❌ Error: El administrador no está activo en el sistema."
+        
+        # Verificar que el usuario existe
+        user_check = supabase.table("users_agent").select(
+            "phone, name, type, status"
+        ).eq("phone", telefono).execute()
+        
+        if not user_check.data:
+            return f"❌ Error: El usuario con teléfono {telefono} no existe en el sistema."
+        
+        user_data = user_check.data[0]
+        user_name = user_data.get("name", "Sin nombre")
+        user_type = user_data.get("type")
+        
+        # No permitir eliminar administradores
+        if user_type == "Administrador":
+            return f"❌ Error: No se puede eliminar un usuario administrador."
+        
+        # Si ya está inactivo, no hacer nada
+        if not user_data.get("status"):
+            return f"ℹ️ El usuario {user_name} ({telefono}) ya está eliminado (inactivo)."
+        
+        # Desactivar el usuario (cambiar status a False)
+        supabase.table("users_agent").update({
+            "status": False
+        }).eq("phone", telefono).execute()
+        
+        return (
+            f"✅ Usuario eliminado exitosamente.\n"
+            f"👤 Nombre: {user_name}\n"
+            f"📞 Teléfono: {telefono}\n"
+            f"🔑 Tipo: {user_type}\n"
+            f"📊 Estado: Inactivo\n"
+            f"👑 Eliminado por: {eliminado_por}\n"
+            f"💬 El usuario ya no puede interactuar con el agente"
+        )
+        
+    except Exception as e:
+        error_msg = f"❌ Error al eliminar usuario: {str(e)}"
+        print(f"❌ {error_msg}")
+        return error_msg
 
 

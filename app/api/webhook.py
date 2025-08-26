@@ -301,8 +301,7 @@ class WebhookHandler:
     def __init__(self):
         self.message_processor = MessageProcessor()
         self.response_sender = ResponseSender()
-        self.authorized_phone = ["573195792747", "573172288329"]
-    #TODO verificar numero de telefono del agente de whatsapp, no está tomandolo correctamente.
+        # La autorización ahora se maneja dinámicamente desde la base de datos
     def validate_message(self, body: Dict[str, Any]) -> tuple:
         """Valida y extrae datos del mensaje"""
         try:
@@ -320,9 +319,18 @@ class WebhookHandler:
             message_data = messages[0]
             phone = message_data.get("from", "")
             
-            if phone not in self.authorized_phone:
+            # SIEMPRE verificar autorización en Supabase
+            from app.core.tools import consultar_usuario_autorizado
+            auth_result = consultar_usuario_autorizado(phone)
+            
+            # Si el resultado contiene "❌", significa que no está autorizado
+            if "❌" in auth_result:
                 print(f"🚫 Teléfono no autorizado: {phone}")
+                print(f"🔍 Resultado de autorización: {auth_result}")
                 return None, None, None, None
+            
+            print(f"✅ Teléfono autorizado: {phone}")
+            print(f"🔍 Resultado de autorización: {auth_result}")
             
             channel_id = body.get("channel_id", "")
             message_type = message_data.get("type", "")
