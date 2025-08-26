@@ -1774,4 +1774,65 @@ def gestionar_caja_conciliaciones(accion: str, tipo: str, saldo_caja: float = No
         print(f"❌ Error en gestionar_caja_conciliaciones: {str(e)}")
         return f"❌ Error al gestionar {tipo}: {str(e)}"
 
+@tool
+def obtener_telefonos_activos() -> str:
+    """
+    Obtiene los números de teléfono de todos los usuarios con status "TRUE" desde la tabla user_agent.
+    Esta herramienta consulta la base de datos para obtener los teléfonos de usuarios activos.
+    
+    Returns:
+        str: Lista de números de teléfono de usuarios activos o mensaje de error.
+    """
+    try:
+        print("🔍 Consultando números de teléfono de usuarios activos...")
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Consultar usuarios con status "TRUE"
+        query = """
+            SELECT phone, name, type
+            FROM user_agent 
+            WHERE status = 'TRUE' 
+            AND phone IS NOT NULL 
+            AND phone != ''
+            ORDER BY name, phone
+        """
+        
+        cursor.execute(query)
+        resultados = cursor.fetchall()
+        conn.close()
+        
+        if not resultados:
+            print("⚠️ No se encontraron usuarios activos en la base de datos")
+            return "No se encontraron números de teléfono de usuarios activos en la base de datos."
+        
+        # Extraer los números de teléfono con información adicional
+        telefonos_info = []
+        for row in resultados:
+            phone, name, user_type = row
+            if phone:
+                telefonos_info.append({
+                    'phone': str(phone),
+                    'name': name or 'Sin nombre',
+                    'type': user_type or 'Sin tipo'
+                })
+        
+        print(f"📱 Números de usuarios activos encontrados: {len(telefonos_info)}")
+        
+        if len(telefonos_info) == 1:
+            user = telefonos_info[0]
+            return f"Número de teléfono de usuario activo: {user['phone']} (Nombre: {user['name']}, Tipo: {user['type']})"
+        else:
+            # Formatear múltiples usuarios
+            lines = ["Números de teléfono de usuarios activos:"]
+            for user in telefonos_info:
+                lines.append(f"📱 {user['phone']} - {user['name']} ({user['type']})")
+            return "\n".join(lines)
+            
+    except Exception as e:
+        error_msg = f"Error obteniendo números de usuarios activos: {str(e)}"
+        print(f"❌ {error_msg}")
+        return error_msg
+
 
