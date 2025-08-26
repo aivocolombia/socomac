@@ -1792,7 +1792,7 @@ def obtener_administradores() -> str:
         # Consultar usuarios con type "Administrador"
         query = """
             SELECT phone, name, status, type
-            FROM user_agent 
+            FROM users_agent 
             WHERE type = 'Administrador' 
             AND phone IS NOT NULL 
             AND phone != ''
