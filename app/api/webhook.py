@@ -53,6 +53,7 @@ class MessageProcessor:
         print(f"🔗 Link de audio: {audio_link}")
         return self._process_audio_file(audio_link, "voz")
     
+    
     def process_audio_message(self, message_data: Dict[str, Any]) -> str:
         """Procesa mensajes de audio (no voz)"""
         print("🎵 Mensaje de audio recibido")
