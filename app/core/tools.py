@@ -1774,4 +1774,66 @@ def gestionar_caja_conciliaciones(accion: str, tipo: str, saldo_caja: float = No
         print(f"❌ Error en gestionar_caja_conciliaciones: {str(e)}")
         return f"❌ Error al gestionar {tipo}: {str(e)}"
 
+@tool
+def obtener_administradores() -> str:
+    """
+    Obtiene los usuarios con type "Administrador" desde la tabla user_agent, mostrando su número de teléfono y status.
+    Esta herramienta consulta la base de datos para obtener información de todos los administradores.
+    
+    Returns:
+        str: Lista de administradores con su teléfono y status, o mensaje de error.
+    """
+    try:
+        print("🔍 Consultando usuarios administradores...")
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Consultar usuarios con type "Administrador"
+        query = """
+            SELECT phone, name, status, type
+            FROM user_agent 
+            WHERE type = 'Administrador' 
+            AND phone IS NOT NULL 
+            AND phone != ''
+            ORDER BY name, phone
+        """
+        
+        cursor.execute(query)
+        resultados = cursor.fetchall()
+        conn.close()
+        
+        if not resultados:
+            print("⚠️ No se encontraron administradores en la base de datos")
+            return "No se encontraron usuarios administradores en la base de datos."
+        
+        # Formatear los resultados
+        administradores_info = []
+        for row in resultados:
+            phone, name, status, user_type = row
+            if phone:
+                administradores_info.append({
+                    'phone': str(phone),
+                    'name': name or 'Sin nombre',
+                    'status': status or 'Sin status',
+                    'type': user_type or 'Sin tipo'
+                })
+        
+        print(f"👑 Administradores encontrados: {len(administradores_info)}")
+        
+        if len(administradores_info) == 1:
+            admin = administradores_info[0]
+            return f"👑 Administrador encontrado:\n📱 Teléfono: {admin['phone']}\n👤 Nombre: {admin['name']}\n✅ Status: {admin['status']}\n🔧 Tipo: {admin['type']}"
+        else:
+            # Formatear múltiples administradores
+            lines = ["👑 Usuarios Administradores:"]
+            for i, admin in enumerate(administradores_info, 1):
+                lines.append(f"{i}. 📱 {admin['phone']} - 👤 {admin['name']} - ✅ {admin['status']} - 🔧 {admin['type']}")
+            return "\n".join(lines)
+            
+    except Exception as e:
+        error_msg = f"Error obteniendo administradores: {str(e)}"
+        print(f"❌ {error_msg}")
+        return error_msg
+
 
