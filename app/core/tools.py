@@ -1775,3 +1775,53 @@ def gestionar_caja_conciliaciones(accion: str, tipo: str, saldo_caja: float = No
         return f"❌ Error al gestionar {tipo}: {str(e)}"
 
 
+@tool
+def obtener_telefonos_administradores() -> str:
+    """
+    Obtiene los números de teléfono de todos los usuarios con tipo "Administrador" desde la tabla user_agent.
+    Esta herramienta consulta la base de datos para obtener los teléfonos autorizados.
+    
+    Returns:
+        str: Lista de números de teléfono de administradores o mensaje de error.
+    """
+    try:
+        print("🔍 Consultando números de teléfono de administradores...")
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Consultar usuarios con tipo "Administrador"
+        query = """
+            SELECT phone 
+            FROM user_agent 
+            WHERE type = 'Administrador' 
+            AND phone IS NOT NULL 
+            AND phone != ''
+            ORDER BY phone
+        """
+        
+        cursor.execute(query)
+        resultados = cursor.fetchall()
+        conn.close()
+        
+        if not resultados:
+            print("⚠️ No se encontraron administradores en la base de datos")
+            return "No se encontraron números de teléfono de administradores en la base de datos."
+        
+        # Extraer los números de teléfono
+        telefonos = [str(row[0]) for row in resultados if row[0]]
+        
+        print(f"📱 Números de administradores encontrados: {telefonos}")
+        
+        if len(telefonos) == 1:
+            return f"Número de teléfono de administrador: {telefonos[0]}"
+        else:
+            telefonos_formateados = ", ".join(telefonos)
+            return f"Números de teléfono de administradores: {telefonos_formateados}"
+            
+    except Exception as e:
+        error_msg = f"Error obteniendo números de administradores: {str(e)}"
+        print(f"❌ {error_msg}")
+        return error_msg
+
+
