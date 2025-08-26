@@ -6,6 +6,7 @@ from app.services.sender import send_image_message
 from app.services.telegram import send_telegram_message, download_file
 from app.services.audio_processor import audio_processor
 from app.services.image_processor import image_processor
+from app.db.supabase import get_supabase_client
 from typing import List, Optional, Dict, Any
 import logging
 import os
@@ -18,6 +19,35 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def get_authorized_phones() -> List[str]:
+    """Obtiene los números de teléfono autorizados usando la herramienta del agente"""
+    try:
+        from app.core.tools import obtener_telefonos_administradores
+        
+        # Usar la herramienta del agente para obtener los números
+        result = obtener_telefonos_administradores()
+        
+        # Extraer los números de teléfono del resultado
+        if "Números de teléfono de administradores:" in result:
+            # Múltiples números
+            phones_text = result.replace("Números de teléfono de administradores:", "").strip()
+            authorized_phones = [phone.strip() for phone in phones_text.split(",")]
+        elif "Número de teléfono de administrador:" in result:
+            # Un solo número
+            phone = result.replace("Número de teléfono de administrador:", "").strip()
+            authorized_phones = [phone]
+        else:
+            print("⚠️ No se encontraron números de administradores")
+            return []
+        
+        print(f"📱 Números de administradores cargados: {authorized_phones}")
+        return authorized_phones
+            
+    except Exception as e:
+        print(f"❌ Error obteniendo números de administradores: {e}")
+        return []
+
+
 @router.get("/health")
 async def health_check():
     return {"status": "ok", "message": "API is running"}
@@ -25,6 +55,33 @@ async def health_check():
 @router.get("/")
 async def health_check():
     return {"status": "ok", "message": "API is running"}
+
+
+@router.get("/authorized-phones")
+async def get_authorized_phones_endpoint():
+    """Endpoint para obtener los números de teléfono autorizados actuales"""
+    return {
+        "status": "success",
+        "authorized_phones": webhook_handler.authorized_phone,
+        "count": len(webhook_handler.authorized_phone)
+    }
+
+
+@router.post("/reload-authorized-phones")
+async def reload_authorized_phones():
+    """Endpoint para recargar los números de teléfono autorizados desde la base de datos"""
+    try:
+        webhook_handler.reload_authorized_phones()
+        return {
+            "status": "success", 
+            "message": "Números autorizados recargados exitosamente",
+            "authorized_phones": webhook_handler.authorized_phone
+        }
+    except Exception as e:
+        return {
+            "status": "error", 
+            "message": f"Error recargando números autorizados: {str(e)}"
+        }
 
 
 class MessageProcessor:
@@ -301,7 +358,18 @@ class WebhookHandler:
     def __init__(self):
         self.message_processor = MessageProcessor()
         self.response_sender = ResponseSender()
-        self.authorized_phone = ["573195792747", "573172288329"]
+        # Cargar números autorizados desde la base de datos
+        self.authorized_phone = get_authorized_phones()
+        print(f"🔐 Números autorizados inicializados: {self.authorized_phone}")
+    
+    def reload_authorized_phones(self):
+        """Recarga los números autorizados desde la base de datos"""
+        try:
+            self.authorized_phone = get_authorized_phones()
+            print(f"🔄 Números autorizados recargados: {self.authorized_phone}")
+        except Exception as e:
+            print(f"❌ Error recargando números autorizados: {e}")
+    
     #TODO verificar numero de telefono del agente de whatsapp, no está tomandolo correctamente.
     def validate_message(self, body: Dict[str, Any]) -> tuple:
         """Valida y extrae datos del mensaje"""
