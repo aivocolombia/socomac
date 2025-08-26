@@ -29,7 +29,14 @@ from app.core.tools import (
     crear_nuevo_cliente,
     consultar_detalles_ordenes_cliente,
     procesar_devolucion,
-    gestionar_caja_conciliaciones
+    gestionar_caja_conciliaciones,
+    consultar_usuario_autorizado,
+    listar_usuarios_autorizados,
+    asignar_usuario_secundario,
+    buscar_usuario_por_nombre,
+    cambiar_status_usuario,
+    cambiar_tipo_usuario,
+    eliminar_usuario_secundario
 )
 import os
 import json
@@ -66,7 +73,14 @@ tools = [
    crear_nuevo_cliente,
    consultar_detalles_ordenes_cliente,
    procesar_devolucion,
-   gestionar_caja_conciliaciones
+   gestionar_caja_conciliaciones,
+   consultar_usuario_autorizado,
+   listar_usuarios_autorizados,
+   asignar_usuario_secundario,
+   buscar_usuario_por_nombre,
+   cambiar_status_usuario,
+   cambiar_tipo_usuario,
+   eliminar_usuario_secundario
 ]
 
 
