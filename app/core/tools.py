@@ -1880,4 +1880,94 @@ def obtener_telefono_usuario_id2() -> str:
         print(f"❌ {error_msg}")
         return error_msg
 
+@tool
+def cambiar_status_usuario(nombre_o_telefono: str, nuevo_status: str) -> str:
+    """
+    Cambia el status de un usuario en la tabla users_agent.
+    Permite buscar al usuario por nombre o teléfono y cambiar su status a activo (TRUE) o inactivo (FALSE).
+    
+    Args:
+        nombre_o_telefono (str): Nombre completo o número de teléfono del usuario a buscar
+        nuevo_status (str): Nuevo status a asignar ("TRUE" para activo, "FALSE" para inactivo)
+    
+    Returns:
+        str: Mensaje de confirmación del cambio o error si no se encuentra el usuario.
+    """
+    try:
+        print(f"🔍 Buscando usuario: '{nombre_o_telefono}' para cambiar status a: {nuevo_status}")
+        
+        # Validar el nuevo status
+        if nuevo_status.upper() not in ["TRUE", "FALSE"]:
+            return "❌ Status inválido. Debe ser 'TRUE' (activo) o 'FALSE' (inactivo)."
+        
+        # Normalizar el status
+        status_normalizado = "TRUE" if nuevo_status.upper() == "TRUE" else "FALSE"
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Buscar usuario por nombre o teléfono
+        query = """
+            SELECT id, name, phone, status, type
+            FROM users_agent 
+            WHERE (name ILIKE %s OR phone = %s)
+            AND name IS NOT NULL 
+            AND name != ''
+        """
+        
+        # Si es un número de teléfono, buscar exacto; si es nombre, buscar parcial
+        search_term = nombre_o_telefono if nombre_o_telefono.isdigit() else f"%{nombre_o_telefono}%"
+        
+        cursor.execute(query, (search_term, nombre_o_telefono))
+        resultados = cursor.fetchall()
+        
+        if not resultados:
+            conn.close()
+            return f"❌ No se encontró ningún usuario con nombre o teléfono: '{nombre_o_telefono}'"
+        
+        if len(resultados) > 1:
+            # Mostrar opciones si hay múltiples resultados
+            opciones = []
+            for i, (user_id, name, phone, status, user_type) in enumerate(resultados, 1):
+                opciones.append(f"{i}. {name} | 📱 {phone} | Status: {status} | Tipo: {user_type}")
+            
+            conn.close()
+            return f"🔍 Múltiples usuarios encontrados. Por favor especifica:\n" + "\n".join(opciones)
+        
+        # Un solo resultado encontrado
+        user_id, name, phone, status_actual, user_type = resultados[0]
+        
+        # Verificar si el status ya es el deseado
+        if status_actual == status_normalizado:
+            conn.close()
+            return f"ℹ️ El usuario {name} ya tiene el status '{status_normalizado}'"
+        
+        # Actualizar el status
+        update_query = """
+            UPDATE users_agent 
+            SET status = %s, updated_at = NOW()
+            WHERE id = %s
+        """
+        
+        cursor.execute(update_query, (status_normalizado, user_id))
+        conn.commit()
+        
+        # Verificar que la actualización fue exitosa
+        verify_query = "SELECT status FROM users_agent WHERE id = %s"
+        cursor.execute(verify_query, (user_id,))
+        status_verificado = cursor.fetchone()[0]
+        
+        conn.close()
+        
+        if status_verificado == status_normalizado:
+            status_texto = "ACTIVO" if status_normalizado == "TRUE" else "INACTIVO"
+            return f"✅ Status actualizado exitosamente\n👤 Usuario: {name}\n📱 Teléfono: {phone}\n🔄 Status anterior: {status_actual}\n✅ Status nuevo: {status_normalizado} ({status_texto})"
+        else:
+            return f"❌ Error al actualizar el status. Status actual: {status_verificado}"
+            
+    except Exception as e:
+        error_msg = f"Error cambiando status del usuario: {str(e)}"
+        print(f"❌ {error_msg}")
+        return error_msg
+
 
