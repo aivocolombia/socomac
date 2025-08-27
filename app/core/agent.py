@@ -30,7 +30,8 @@ from app.core.tools import (
     consultar_detalles_ordenes_cliente,
     procesar_devolucion,
     gestionar_caja_conciliaciones,
-    obtener_administradores
+    obtener_administradores,
+    obtener_telefono_usuario_id2
 )
 import os
 import json
@@ -68,7 +69,8 @@ tools = [
    consultar_detalles_ordenes_cliente,
    procesar_devolucion,
    gestionar_caja_conciliaciones,
-   obtener_administradores
+   obtener_administradores,
+   obtener_telefono_usuario_id2
 ]
 
 

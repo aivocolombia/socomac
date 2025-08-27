@@ -301,7 +301,30 @@ class WebhookHandler:
     def __init__(self):
         self.message_processor = MessageProcessor()
         self.response_sender = ResponseSender()
-        self.authorized_phone = ["573195792747", "573172288329"]
+        self.authorized_phone = ["573172288329"]
+    
+    def get_authorized_phones(self):
+        """Obtiene los números de teléfono autorizados dinámicamente"""
+        try:
+            # Importar la herramienta aquí para evitar dependencias circulares
+            from app.core.tools import obtener_telefono_usuario_id2
+            
+            # Obtener el teléfono del usuario con id=2
+            telefono_id2 = obtener_telefono_usuario_id2()
+            
+            # Verificar que se obtuvo un teléfono válido (no un mensaje de error)
+            if telefono_id2 and telefono_id2.isdigit() and len(telefono_id2) >= 10:
+                # Combinar el teléfono existente con el nuevo
+                authorized_phones = ["573172288329", telefono_id2]
+                print(f"📱 Teléfonos autorizados actualizados: {authorized_phones}")
+                return authorized_phones
+            else:
+                print(f"⚠️ No se pudo obtener teléfono válido para usuario id=2: {telefono_id2}")
+                return ["573172288329"]
+                
+        except Exception as e:
+            print(f"❌ Error obteniendo teléfonos autorizados: {e}")
+            return ["573172288329"]
     #TODO verificar numero de telefono del agente de whatsapp, no está tomandolo correctamente.
     def validate_message(self, body: Dict[str, Any]) -> tuple:
         """Valida y extrae datos del mensaje"""
@@ -320,8 +343,12 @@ class WebhookHandler:
             message_data = messages[0]
             phone = message_data.get("from", "")
             
-            if phone not in self.authorized_phone:
+            # Obtener teléfonos autorizados dinámicamente
+            authorized_phones = self.get_authorized_phones()
+            
+            if phone not in authorized_phones:
                 print(f"🚫 Teléfono no autorizado: {phone}")
+                print(f"📱 Teléfonos autorizados: {authorized_phones}")
                 return None, None, None, None
             
             channel_id = body.get("channel_id", "")

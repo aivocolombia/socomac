@@ -1836,4 +1836,48 @@ def obtener_administradores() -> str:
         print(f"❌ {error_msg}")
         return error_msg
 
+@tool
+def obtener_telefono_usuario_id2() -> str:
+    """
+    Obtiene el número de teléfono del usuario con id=2 desde la tabla users_agent.
+    Esta herramienta consulta la base de datos para obtener el teléfono específico del usuario con ID 2.
+    
+    Returns:
+        str: Número de teléfono del usuario con id=2, o mensaje de error si no se encuentra.
+    """
+    try:
+        print("🔍 Consultando teléfono del usuario con id=2...")
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Consultar usuario con id=2
+        query = """
+            SELECT phone, name, status, type
+            FROM users_agent 
+            WHERE id = 2
+        """
+        
+        cursor.execute(query)
+        resultado = cursor.fetchone()
+        conn.close()
+        
+        if not resultado:
+            print("⚠️ No se encontró usuario con id=2 en la base de datos")
+            return "No se encontró usuario con id=2 en la base de datos."
+        
+        phone, name, status, user_type = resultado
+        
+        if not phone:
+            print("⚠️ El usuario con id=2 no tiene número de teléfono registrado")
+            return "El usuario con id=2 no tiene número de teléfono registrado."
+        
+        print(f"📱 Teléfono encontrado para usuario id=2: {phone}")
+        return str(phone)
+            
+    except Exception as e:
+        error_msg = f"Error obteniendo teléfono del usuario id=2: {str(e)}"
+        print(f"❌ {error_msg}")
+        return error_msg
+
 
