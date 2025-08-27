@@ -1885,6 +1885,7 @@ def cambiar_status_usuario(nombre_o_telefono: str, nuevo_status: str) -> str:
     """
     Cambia el status de un usuario en la tabla users_agent.
     Permite buscar al usuario por nombre o teléfono y cambiar su status a activo (TRUE) o inactivo (FALSE).
+    IMPORTANTE: Solo puede haber un usuario activo a la vez. Al activar un usuario, se desactivan automáticamente todos los demás.
     
     Args:
         nombre_o_telefono (str): Nombre completo o número de teléfono del usuario a buscar
@@ -1942,7 +1943,18 @@ def cambiar_status_usuario(nombre_o_telefono: str, nuevo_status: str) -> str:
             conn.close()
             return f"ℹ️ El usuario {name} ya tiene el status '{status_normalizado}'"
         
-        # Actualizar el status
+        # Si se va a activar el usuario, desactivar todos los demás primero
+        if status_normalizado == "TRUE":
+            # Desactivar todos los usuarios excepto el actual
+            deactivate_query = """
+                UPDATE users_agent 
+                SET status = 'FALSE', updated_at = NOW()
+                WHERE id != %s
+            """
+            cursor.execute(deactivate_query, (user_id,))
+            print(f"🔒 Desactivados todos los demás usuarios")
+        
+        # Actualizar el status del usuario
         update_query = """
             UPDATE users_agent 
             SET status = %s, updated_at = NOW()
@@ -1961,7 +1973,10 @@ def cambiar_status_usuario(nombre_o_telefono: str, nuevo_status: str) -> str:
         
         if status_verificado == status_normalizado:
             status_texto = "ACTIVO" if status_normalizado == "TRUE" else "INACTIVO"
-            return f"✅ Status actualizado exitosamente\n👤 Usuario: {name}\n📱 Teléfono: {phone}\n🔄 Status anterior: {status_actual}\n✅ Status nuevo: {status_normalizado} ({status_texto})"
+            if status_normalizado == "TRUE":
+                return f"✅ Usuario activado exitosamente (todos los demás desactivados)\n👤 Usuario: {name}\n📱 Teléfono: {phone}\n🔄 Status anterior: {status_actual}\n✅ Status nuevo: {status_normalizado} ({status_texto})\n🔒 Nota: Todos los demás usuarios han sido desactivados automáticamente"
+            else:
+                return f"✅ Status actualizado exitosamente\n👤 Usuario: {name}\n📱 Teléfono: {phone}\n🔄 Status anterior: {status_actual}\n✅ Status nuevo: {status_normalizado} ({status_texto})"
         else:
             return f"❌ Error al actualizar el status. Status actual: {status_verificado}"
             

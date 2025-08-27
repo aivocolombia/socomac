@@ -111,7 +111,7 @@ Casos:
 
 8. Obtener teléfono usuario ID 2: Si el usuario pregunta por el teléfono del usuario con id=2, o necesita obtener ese número específico, usa obtener_telefono_usuario_id2() para obtener el número de teléfono del usuario con id=2 desde la tabla users_agent.
 
-9. Cambiar status de usuario: Si el usuario quiere cambiar el status de un usuario (activar/desactivar), usa cambiar_status_usuario() para buscar al usuario por nombre o teléfono y cambiar su status a TRUE (activo) o FALSE (inactivo). Debes preguntar el nombre/teléfono del usuario y el nuevo status deseado.
+9. Cambiar status de usuario: Si el usuario quiere cambiar el status de un usuario (activar/desactivar), usa cambiar_status_usuario() para buscar al usuario por nombre o teléfono y cambiar su status a TRUE (activo) o FALSE (inactivo). IMPORTANTE: Solo puede haber un usuario activo a la vez. Al activar un usuario, automáticamente se desactivan todos los demás. Debes preguntar el nombre/teléfono del usuario y el nuevo status deseado.
 
                10. Crear orden de venta:
      - Si el usuario quiere crear una nueva orden de venta (o dice "afiliar una orden de venta", "una venta", "crear venta"), analiza el mensaje completo para extraer toda la información disponible:
