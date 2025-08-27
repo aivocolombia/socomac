@@ -1837,46 +1837,93 @@ def obtener_administradores() -> str:
         return error_msg
 
 @tool
-def obtener_telefono_usuario_id2() -> str:
+def obtener_telefono_usuario_id2(nombre_o_telefono: str = "") -> str:
     """
-    Obtiene el número de teléfono del usuario con id=2 desde la tabla users_agent.
-    Esta herramienta consulta la base de datos para obtener el teléfono específico del usuario con ID 2.
+    Obtiene el número de teléfono de un usuario activo desde la tabla users_agent.
+    Permite al administrador seleccionar una persona por nombre o teléfono y verifica que su status esté activo.
+    
+    Args:
+        nombre_o_telefono (str): Nombre completo o número de teléfono del usuario a buscar. Si está vacío, muestra todos los usuarios activos.
     
     Returns:
-        str: Número de teléfono del usuario con id=2, o mensaje de error si no se encuentra.
+        str: Número de teléfono del usuario activo, o mensaje de error si no se encuentra.
     """
     try:
-        print("🔍 Consultando teléfono del usuario con id=2...")
+        print(f"🔍 Consultando teléfono del usuario: '{nombre_o_telefono}'")
         
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Consultar usuario con id=2
-        query = """
-            SELECT phone, name, status, type
-            FROM users_agent 
-            WHERE id = 2
-        """
-        
-        cursor.execute(query)
-        resultado = cursor.fetchone()
-        conn.close()
-        
-        if not resultado:
-            print("⚠️ No se encontró usuario con id=2 en la base de datos")
-            return "No se encontró usuario con id=2 en la base de datos."
-        
-        phone, name, status, user_type = resultado
-        
-        if not phone:
-            print("⚠️ El usuario con id=2 no tiene número de teléfono registrado")
-            return "El usuario con id=2 no tiene número de teléfono registrado."
-        
-        print(f"📱 Teléfono encontrado para usuario id=2: {phone}")
-        return str(phone)
+        if nombre_o_telefono:
+            # Buscar usuario específico por nombre o teléfono
+            query = """
+                SELECT phone, name, status, type
+                FROM users_agent 
+                WHERE (name ILIKE %s OR phone = %s)
+                AND name IS NOT NULL 
+                AND name != ''
+            """
+            
+            # Si es un número de teléfono, buscar exacto; si es nombre, buscar parcial
+            search_term = nombre_o_telefono if nombre_o_telefono.isdigit() else f"%{nombre_o_telefono}%"
+            
+            cursor.execute(query, (search_term, nombre_o_telefono))
+            resultados = cursor.fetchall()
+            
+            if not resultados:
+                conn.close()
+                return f"❌ No se encontró ningún usuario con nombre o teléfono: '{nombre_o_telefono}'"
+            
+            if len(resultados) > 1:
+                # Mostrar opciones si hay múltiples resultados
+                opciones = []
+                for i, (phone, name, status, user_type) in enumerate(resultados, 1):
+                    status_texto = "ACTIVO" if status == "TRUE" else "INACTIVO"
+                    opciones.append(f"{i}. {name} | 📱 {phone} | Status: {status_texto} | Tipo: {user_type}")
+                
+                conn.close()
+                return f"🔍 Múltiples usuarios encontrados. Por favor especifica:\n" + "\n".join(opciones)
+            
+            # Un solo resultado encontrado
+            phone, name, status, user_type = resultados[0]
+            
+            if not phone:
+                conn.close()
+                return f"⚠️ El usuario {name} no tiene un número de teléfono registrado."
+            
+            if status != "TRUE":
+                conn.close()
+                return f"⚠️ El usuario {name} no está activo (status: {status}). Solo se pueden obtener teléfonos de usuarios activos."
+            
+            conn.close()
+            print(f"📱 Teléfono encontrado para usuario activo: {phone}")
+            return str(phone)
+        else:
+            # Mostrar todos los usuarios activos
+            query = """
+                SELECT phone, name, status, type
+                FROM users_agent 
+                WHERE status = 'TRUE'
+                AND phone IS NOT NULL 
+                AND phone != ''
+                ORDER BY name
+            """
+            
+            cursor.execute(query)
+            resultados = cursor.fetchall()
+            conn.close()
+            
+            if not resultados:
+                return "❌ No se encontraron usuarios activos con número de teléfono registrado."
+            
+            usuarios_info = ["📋 Usuarios activos disponibles:"]
+            for phone, name, status, user_type in resultados:
+                usuarios_info.append(f"👤 {name} | 📱 {phone} | Tipo: {user_type}")
+            
+            return "\n".join(usuarios_info)
             
     except Exception as e:
-        error_msg = f"Error obteniendo teléfono del usuario id=2: {str(e)}"
+        error_msg = f"Error obteniendo teléfono del usuario: {str(e)}"
         print(f"❌ {error_msg}")
         return error_msg
 

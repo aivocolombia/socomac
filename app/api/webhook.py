@@ -309,22 +309,35 @@ class WebhookHandler:
             # Importar la herramienta aquí para evitar dependencias circulares
             from app.core.tools import obtener_telefono_usuario_id2
             
-            # Obtener el teléfono del usuario con id=2
-            telefono_id2 = obtener_telefono_usuario_id2()
+            # Obtener todos los usuarios activos
+            usuarios_activos = obtener_telefono_usuario_id2("")
             
-            # Verificar que se obtuvo un teléfono válido (no un mensaje de error)
-            if telefono_id2 and telefono_id2.isdigit() and len(telefono_id2) >= 10:
-                # Combinar el teléfono existente con el nuevo
-                authorized_phones = ["573172288329", telefono_id2]
-                print(f"📱 Teléfonos autorizados actualizados: {authorized_phones}")
-                return authorized_phones
+            # Verificar si se obtuvieron usuarios activos
+            if usuarios_activos and not usuarios_activos.startswith("❌"):
+                # Extraer teléfonos de la respuesta
+                lines = usuarios_activos.split('\n')
+                authorized_phones = []
+                
+                for line in lines:
+                    if '📱' in line:
+                        # Extraer el número de teléfono de la línea
+                        phone_part = line.split('📱')[1].split('|')[0].strip()
+                        if phone_part.isdigit() and len(phone_part) >= 10:
+                            authorized_phones.append(phone_part)
+                
+                if authorized_phones:
+                    print(f"📱 Teléfonos autorizados obtenidos dinámicamente: {authorized_phones}")
+                    return authorized_phones
+                else:
+                    print(f"⚠️ No se pudieron extraer teléfonos válidos de: {usuarios_activos}")
+                    return []
             else:
-                print(f"⚠️ No se pudo obtener teléfono válido para usuario id=2: {telefono_id2}")
-                return ["573172288329"]
+                print(f"⚠️ No se pudieron obtener usuarios activos: {usuarios_activos}")
+                return []
                 
         except Exception as e:
             print(f"❌ Error obteniendo teléfonos autorizados: {e}")
-            return ["573172288329"]
+            return []
     #TODO verificar numero de telefono del agente de whatsapp, no está tomandolo correctamente.
     def validate_message(self, body: Dict[str, Any]) -> tuple:
         """Valida y extrae datos del mensaje"""
@@ -345,6 +358,10 @@ class WebhookHandler:
             
             # Obtener teléfonos autorizados dinámicamente
             authorized_phones = self.get_authorized_phones()
+            
+            if not authorized_phones:
+                print(f"⚠️ No hay teléfonos autorizados configurados")
+                return None, None, None, None
             
             if phone not in authorized_phones:
                 print(f"🚫 Teléfono no autorizado: {phone}")
