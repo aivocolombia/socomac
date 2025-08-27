@@ -1891,19 +1891,21 @@ def obtener_telefono_usuario_id2(nombre_o_telefono: str = "") -> str:
                 conn.close()
                 return f"⚠️ El usuario {name} no tiene un número de teléfono registrado."
             
-            if status != "TRUE":
+            # Verificar que el usuario esté activo, excepto si es administrador
+            # Los administradores siempre pueden obtener su teléfono, independientemente del status
+            if user_type != "Administrador" and status != "TRUE":
                 conn.close()
-                return f"⚠️ El usuario {name} no está activo (status: {status}). Solo se pueden obtener teléfonos de usuarios activos."
+                return f"⚠️ El usuario {name} no está activo (status: {status}). Solo se pueden obtener teléfonos de usuarios activos o administradores."
             
             conn.close()
             print(f"📱 Teléfono encontrado para usuario activo: {phone}")
             return str(phone)
         else:
-            # Mostrar todos los usuarios activos
+            # Mostrar todos los usuarios activos y administradores (independientemente del status)
             query = """
                 SELECT phone, name, status, type
                 FROM users_agent 
-                WHERE status = 'TRUE'
+                WHERE (status = 'TRUE' OR type = 'Administrador')
                 AND phone IS NOT NULL 
                 AND phone != ''
                 ORDER BY name
@@ -1914,9 +1916,9 @@ def obtener_telefono_usuario_id2(nombre_o_telefono: str = "") -> str:
             conn.close()
             
             if not resultados:
-                return "❌ No se encontraron usuarios activos con número de teléfono registrado."
+                return "❌ No se encontraron usuarios activos o administradores con número de teléfono registrado."
             
-            usuarios_info = ["📋 Usuarios activos disponibles:"]
+            usuarios_info = ["📋 Usuarios activos y administradores disponibles:"]
             for phone, name, status, user_type in resultados:
                 usuarios_info.append(f"👤 {name} | 📱 {phone} | Tipo: {user_type}")
             

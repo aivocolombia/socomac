@@ -48,7 +48,7 @@ HERRAMIENTAS DISPONIBLES:
 - procesar_devolucion(): Procesa devoluciones
 - gestionar_caja_conciliaciones(): Gestiona apertura/cierre de caja y conciliaciones bancarias
 - obtener_administradores(): Obtiene usuarios con type "Administrador" mostrando teléfono y status
-- obtener_telefono_usuario_id2(nombre_o_telefono): Obtiene el número de teléfono de un usuario activo desde users_agent. Permite buscar por nombre o teléfono y verifica que el status esté activo. Si no se especifica nombre, muestra todos los usuarios activos.
+- obtener_telefono_usuario_id2(nombre_o_telefono): Obtiene el número de teléfono de un usuario activo o administrador desde users_agent. Permite buscar por nombre o teléfono. Los administradores siempre pueden obtener su teléfono independientemente del status. Si no se especifica nombre, muestra todos los usuarios activos y administradores.
 - cambiar_status_usuario(): Cambia el status de un usuario (TRUE/FALSE) buscando por nombre o teléfono
 - limpiar_memoria(): Limpia la memoria de conversación
 
@@ -109,7 +109,7 @@ Casos:
 
 7. Consultar administradores: Si el usuario pregunta por administradores, usuarios con type "Administrador", o quiere ver información de administradores, usa obtener_administradores() para obtener los usuarios con type "Administrador" desde la tabla user_agent, mostrando su teléfono y status.
 
-8. Obtener teléfono de usuario activo: Si el usuario pregunta por el teléfono de un usuario específico, o necesita obtener el número de teléfono de un usuario activo, usa obtener_telefono_usuario_id2(nombre_o_telefono) para buscar al usuario por nombre o teléfono y obtener su número. La herramienta verifica que el usuario esté activo. Si no se especifica nombre, muestra todos los usuarios activos disponibles.
+8. Obtener teléfono de usuario activo o administrador: Si el usuario pregunta por el teléfono de un usuario específico, o necesita obtener el número de teléfono de un usuario activo o administrador, usa obtener_telefono_usuario_id2(nombre_o_telefono) para buscar al usuario por nombre o teléfono y obtener su número. Los administradores siempre pueden obtener su teléfono independientemente del status. Si no se especifica nombre, muestra todos los usuarios activos y administradores disponibles.
 
 9. Cambiar status de usuario: Si el usuario quiere cambiar el status de un usuario (activar/desactivar), usa cambiar_status_usuario() para buscar al usuario por nombre o teléfono y cambiar su status a TRUE (activo) o FALSE (inactivo). IMPORTANTE: Solo puede haber un usuario activo a la vez. Al activar un usuario, automáticamente se desactivan todos los demás. Debes preguntar el nombre/teléfono del usuario y el nuevo status deseado.
 
