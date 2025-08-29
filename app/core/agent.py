@@ -32,7 +32,8 @@ from app.core.tools import (
     gestionar_caja_conciliaciones,
     obtener_administradores,
     obtener_telefono_usuario_id2,
-    cambiar_status_usuario
+    cambiar_status_usuario,
+    crear_usuario_agent
 )
 import os
 import json
@@ -72,7 +73,8 @@ tools = [
    gestionar_caja_conciliaciones,
    obtener_administradores,
    obtener_telefono_usuario_id2,
-   cambiar_status_usuario
+   cambiar_status_usuario,
+   crear_usuario_agent
 ]
 
 

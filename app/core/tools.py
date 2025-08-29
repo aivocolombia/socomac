@@ -1987,10 +1987,7 @@ def cambiar_status_usuario(nombre_o_telefono: str, nuevo_status: str) -> str:
         # Un solo resultado encontrado
         user_id, name, phone, status_actual, user_type = resultados[0]
         
-        # Verificar si el status ya es el deseado
-        if status_actual == status_normalizado:
-            conn.close()
-            return f"ℹ️ El usuario {name} ya tiene el status '{status_normalizado}'"
+
         
         # Si se va a activar el usuario, desactivar todos los demás primero
         if status_normalizado == "TRUE":
@@ -2031,6 +2028,115 @@ def cambiar_status_usuario(nombre_o_telefono: str, nuevo_status: str) -> str:
             
     except Exception as e:
         error_msg = f"Error cambiando status del usuario: {str(e)}"
+        print(f"❌ {error_msg}")
+        return error_msg
+
+@tool
+def crear_usuario_agent(nombre: str, telefono: str, tipo: str = "Secundario") -> str:
+    """
+    Crea un nuevo usuario en la tabla users_agent.
+    Por defecto, el tipo es "Secundario" y el status es "FALSE" (inactivo).
+    
+    Args:
+        nombre (str): Nombre completo del usuario
+        telefono (str): Número de teléfono del usuario
+        tipo (str): Tipo de usuario ("Administrador", "Secundario", etc.). Por defecto es "Secundario"
+    
+    Returns:
+        str: Mensaje de confirmación del usuario creado o error si no se puede crear.
+    """
+    try:
+        print(f"👤 Creando nuevo usuario: {nombre} | 📱 {telefono} | 🔧 {tipo} | ✅ FALSE")
+        
+        # Validar campos obligatorios
+        if not nombre or not nombre.strip():
+            return "❌ El nombre del usuario es obligatorio."
+        
+        if not telefono or not telefono.strip():
+            return "❌ El teléfono del usuario es obligatorio."
+        
+        # Validar formato del teléfono (debe ser numérico y tener al menos 10 dígitos)
+        if not telefono.isdigit() or len(telefono) < 10:
+            return "❌ El teléfono debe ser numérico y tener al menos 10 dígitos."
+        
+        # Validar tipo de usuario
+        tipos_validos = ["Administrador", "Secundario"]
+        if tipo not in tipos_validos:
+            return f"❌ Tipo de usuario inválido. Debe ser uno de: {', '.join(tipos_validos)}"
+        
+        # Normalizar valores
+        nombre_normalizado = nombre.strip()
+        telefono_normalizado = telefono.strip()
+        tipo_normalizado = tipo
+        status_normalizado = "FALSE"  # Siempre FALSE para nuevos usuarios
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Verificar si ya existe un usuario con ese teléfono
+        check_query = """
+            SELECT id, name, type, status
+            FROM users_agent 
+            WHERE phone = %s
+        """
+        cursor.execute(check_query, (telefono_normalizado,))
+        usuario_existente = cursor.fetchone()
+        
+        if usuario_existente:
+            user_id, name, user_type, user_status = usuario_existente
+            conn.close()
+            return f"❌ Ya existe un usuario con el teléfono {telefono_normalizado}:\n👤 Nombre: {name}\n🔧 Tipo: {user_type}\n✅ Status: {user_status}"
+        
+        # Verificar si ya existe un usuario con ese nombre
+        check_name_query = """
+            SELECT id, phone, type, status
+            FROM users_agent 
+            WHERE name = %s
+        """
+        cursor.execute(check_name_query, (nombre_normalizado,))
+        usuario_nombre_existente = cursor.fetchone()
+        
+        if usuario_nombre_existente:
+            user_id, phone, user_type, user_status = usuario_nombre_existente
+            conn.close()
+            return f"❌ Ya existe un usuario con el nombre '{nombre_normalizado}':\n📱 Teléfono: {phone}\n🔧 Tipo: {user_type}\n✅ Status: {user_status}"
+        
+
+        
+        # Crear el nuevo usuario
+        insert_query = """
+            INSERT INTO users_agent (name, phone, type, status, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, NOW(), NOW())
+            RETURNING id
+        """
+        
+        cursor.execute(insert_query, (nombre_normalizado, telefono_normalizado, tipo_normalizado, status_normalizado))
+        nuevo_user_id = cursor.fetchone()[0]
+        conn.commit()
+        
+        # Verificar que el usuario fue creado exitosamente
+        verify_query = """
+            SELECT name, phone, type, status
+            FROM users_agent 
+            WHERE id = %s
+        """
+        cursor.execute(verify_query, (nuevo_user_id,))
+        usuario_verificado = cursor.fetchone()
+        
+        conn.close()
+        
+        if usuario_verificado:
+            name_verificado, phone_verificado, type_verificado, status_verificado = usuario_verificado
+            status_texto = "ACTIVO" if status_verificado == "TRUE" else "INACTIVO"
+            
+            mensaje = f"✅ Usuario creado exitosamente\n🆔 ID: {nuevo_user_id}\n👤 Nombre: {name_verificado}\n📱 Teléfono: {phone_verificado}\n🔧 Tipo: {type_verificado}\n✅ Status: {status_verificado} ({status_texto})"
+            
+            return mensaje
+        else:
+            return "❌ Error al crear el usuario. No se pudo verificar la creación."
+            
+    except Exception as e:
+        error_msg = f"Error creando usuario: {str(e)}"
         print(f"❌ {error_msg}")
         return error_msg
 
