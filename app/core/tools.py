@@ -261,3 +261,4 @@ def registrar_pago_cuota(cliente_id: int, plan_financiamiento_id: int, cuotas_se
         error_msg = f"Error al registrar pago: {str(e)}"
         print(f"❌ {error_msg}")
         return error_msg
+
