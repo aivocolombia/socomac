@@ -9,11 +9,31 @@ from app.db.mongo import MongoChatMessageHistory
 from langchain.prompts import MessagesPlaceholder
 from app.core.prompts import build_system_prompt
 from app.core.tools import (
+    nombre_cliente,
     limpiar_memoria,
-    consultar_estado_caja,
-    consultar_clientes,
-    consultar_cuotas_pendientes,
-    registrar_pago_cuota
+    nombre_empresa,
+    buscar_clasificacion_por_tipo,
+    planes_pago_pendientes_por_cliente,
+    montos_a_favor_por_cliente,
+    cuotas_pendientes_por_plan,
+    obtener_id_sales_orders_por_plan,
+    obtener_id_client_por_orden,
+    registrar_pago,
+    registrar_pago_directo_orden,
+    consultar_productos,
+    buscar_producto_por_nombre,
+    crear_orden_venta,
+    agregar_detalle_orden_venta,
+    crear_plan_financiamiento,
+    crear_plan_letras,
+    crear_nuevo_cliente,
+    consultar_detalles_ordenes_cliente,
+    procesar_devolucion,
+    gestionar_caja_conciliaciones,
+    obtener_administradores,
+    obtener_telefono_usuario_id2,
+    cambiar_status_usuario,
+    crear_usuario_agent
 )
 import os
 import json
@@ -31,10 +51,30 @@ llm = ChatOpenAI(
 
 tools = [
    limpiar_memoria,
-   consultar_estado_caja,
-   consultar_clientes,
-   consultar_cuotas_pendientes,
-   registrar_pago_cuota
+   nombre_empresa,
+   nombre_cliente,
+   buscar_clasificacion_por_tipo,
+   planes_pago_pendientes_por_cliente,
+   montos_a_favor_por_cliente,
+   cuotas_pendientes_por_plan,
+   obtener_id_sales_orders_por_plan,
+   obtener_id_client_por_orden,
+   registrar_pago,
+   registrar_pago_directo_orden,
+   consultar_productos,
+   buscar_producto_por_nombre,
+   crear_orden_venta,
+   agregar_detalle_orden_venta,
+   crear_plan_financiamiento,
+   crear_plan_letras,
+   crear_nuevo_cliente,
+   consultar_detalles_ordenes_cliente,
+   procesar_devolucion,
+   gestionar_caja_conciliaciones,
+   obtener_administradores,
+   obtener_telefono_usuario_id2,
+   cambiar_status_usuario,
+   crear_usuario_agent
 ]
 
 
