@@ -7,6 +7,29 @@ from app.db.supabase import get_supabase_client
 from typing import List, Dict, Any, Optional
 import json
 
+def get_bank_id(bank_name: str) -> Optional[int]:
+    """
+    Obtiene el ID de un banco por su nombre.
+    
+    Args:
+        bank_name (str): Nombre del banco (Bancolombia, Davivienda, etc.)
+    
+    Returns:
+        Optional[int]: ID del banco o None si no se encuentra
+    """
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT id_bank FROM banks WHERE name ILIKE %s", (f"%{bank_name}%",))
+        result = cursor.fetchone()
+        conn.close()
+        
+        return result[0] if result else None
+    except Exception as e:
+        print(f"❌ Error obteniendo ID del banco {bank_name}: {str(e)}")
+        return None
+
 @tool
 def limpiar_memoria(phone: str) -> str:
     """Limpia toda la memoria de conversación de un usuario específico usando su número de teléfono. Esta herramienta borra todos los mensajes almacenados en MongoDB para el número de teléfono proporcionado."""
@@ -61,7 +84,7 @@ def nombre_cliente(nombre: str = "", offset: int = 0, limit: int = 10) -> str:
                 c.unique_id AS documento,
                 c.address AS direccion,
                 c.city AS ciudad,
-                c.deparment AS departamento,
+                c.department AS departamento,
                 c.phone AS telefono
             FROM public.clients c
             WHERE COALESCE(NULLIF(c.full_name, ''), '') <> ''
@@ -576,8 +599,20 @@ def registrar_pago(
             destiny_bank_normalizado = destiny_bank.strip().lower()
             if destiny_bank_normalizado not in bancos_validos:
                 return "❌ Banco destino inválido. Solo se permite 'Bancolombia' o 'Davivienda'."
-            destiny_bank = bancos_validos[destiny_bank_normalizado]
-            # El banco de emisión (emission_bank) puede ser cualquier banco, no se valida
+            destiny_bank_name = bancos_validos[destiny_bank_normalizado]
+            
+            # Obtener ID del banco destino
+            id_destiny_bank = get_bank_id(destiny_bank_name)
+            if not id_destiny_bank:
+                return f"❌ No se encontró el banco destino '{destiny_bank_name}' en la base de datos."
+            
+            # Obtener ID del banco de emisión si se proporciona
+            id_emission_bank = None
+            if emission_bank:
+                id_emission_bank = get_bank_id(emission_bank)
+                if not id_emission_bank:
+                    return f"❌ No se encontró el banco de emisión '{emission_bank}' en la base de datos."
+            
             trans_value = amount  # Copiar automáticamente
 
         # === Ajustar amount en caso de cheque ===
@@ -591,29 +626,30 @@ def registrar_pago(
         
         # === Insertar en payments ===
         cursor.execute("""
-            INSERT INTO payments (id_sales_orders, id_payment_installment, amount, payment_method, payment_date, destiny_bank, caja_receipt, id_client)
+            INSERT INTO payments (id_sales_orders, id_payment_installment, amount, payment_method, payment_date, id_destiny_bank, caja_receipt, id_client)
             VALUES (%s, %s, %s, %s, CURRENT_DATE, %s, %s, %s)
             RETURNING id_payment;
         """, (
-            id_sales_orders, id_payment_installment, amount, metodo_pago.capitalize(), destiny_bank, caja_receipt, id_client
+            id_sales_orders, id_payment_installment, amount, metodo_pago.capitalize(), 
+            id_destiny_bank if metodo_pago == "transferencia" else None, caja_receipt, id_client
         ))
         id_payment = cursor.fetchone()[0]
 
         # === Insertar en tabla específica según método ===
         if metodo_pago == "transferencia":
             cursor.execute("""
-                INSERT INTO transfers (id_payment, proof_number, emission_bank, emission_date, trans_value, destiny_bank, observations)
+                INSERT INTO transfers (id_payment, proof_number, id_emission_bank, emission_date, trans_value, id_destiny_bank, observations)
                 VALUES (%s, %s, %s, %s, %s, %s, %s);
             """, (
-                id_payment, proof_number, emission_bank, emission_date, trans_value, destiny_bank, observations
+                id_payment, proof_number, id_emission_bank, emission_date, trans_value, id_destiny_bank, observations
             ))
 
         elif metodo_pago == "cheque":
             cursor.execute("""
-                INSERT INTO cheques (id_payment, cheque_number, bank, emision_date, stimate_collection_date, cheque_value, observations)
+                INSERT INTO checks (id_payment, check_number, id_emission_bank, emission_date, stimate_collection_date, amount, observations)
                 VALUES (%s, %s, %s, %s, %s, %s, %s);
             """, (
-                id_payment, cheque_number, bank, emision_date, stimate_collection_date, cheque_value, observations
+                id_payment, cheque_number, id_emission_bank, emission_date, stimate_collection_date, amount, observations
             ))
 
         # === Actualizar pay_amount en la cuota ===
@@ -776,7 +812,20 @@ def registrar_pago_directo_orden(
             destiny_bank_normalizado = destiny_bank.strip().lower()
             if destiny_bank_normalizado not in bancos_validos:
                 return "❌ Banco destino inválido. Solo se permite 'Bancolombia' o 'Davivienda'."
-            destiny_bank = bancos_validos[destiny_bank_normalizado]
+            destiny_bank_name = bancos_validos[destiny_bank_normalizado]
+            
+            # Obtener ID del banco destino
+            id_destiny_bank = get_bank_id(destiny_bank_name)
+            if not id_destiny_bank:
+                return f"❌ No se encontró el banco destino '{destiny_bank_name}' en la base de datos."
+            
+            # Obtener ID del banco de emisión si se proporciona
+            id_emission_bank = None
+            if emission_bank:
+                id_emission_bank = get_bank_id(emission_bank)
+                if not id_emission_bank:
+                    return f"❌ No se encontró el banco de emisión '{emission_bank}' en la base de datos."
+            
             trans_value = amount  # Copiar automáticamente
 
         # === Ajustar amount en caso de cheque ===
@@ -790,29 +839,30 @@ def registrar_pago_directo_orden(
         
         # === Insertar en payments con id_payment_installment = NULL ===
         cursor.execute("""
-            INSERT INTO payments (id_sales_orders, id_payment_installment, amount, payment_method, payment_date, destiny_bank, caja_receipt, id_client)
+            INSERT INTO payments (id_sales_orders, id_payment_installment, amount, payment_method, payment_date, id_destiny_bank, caja_receipt, id_client)
             VALUES (%s, NULL, %s, %s, CURRENT_DATE, %s, %s, %s)
             RETURNING id_payment;
         """, (
-            id_sales_orders, amount, metodo_pago.capitalize(), destiny_bank, caja_receipt, id_client
+            id_sales_orders, amount, metodo_pago.capitalize(), 
+            id_destiny_bank if metodo_pago == "transferencia" else None, caja_receipt, id_client
         ))
         id_payment = cursor.fetchone()[0]
 
         # === Insertar en tabla específica según método ===
         if metodo_pago == "transferencia":
             cursor.execute("""
-                INSERT INTO transfers (id_payment, proof_number, emission_bank, emission_date, trans_value, destiny_bank, observations)
+                INSERT INTO transfers (id_payment, proof_number, id_emission_bank, emission_date, trans_value, id_destiny_bank, observations)
                 VALUES (%s, %s, %s, %s, %s, %s, %s);
             """, (
-                id_payment, proof_number, emission_bank, emission_date, trans_value, destiny_bank, observations
+                id_payment, proof_number, id_emission_bank, emission_date, trans_value, id_destiny_bank, observations
             ))
 
         elif metodo_pago == "cheque":
             cursor.execute("""
-                INSERT INTO cheques (id_payment, cheque_number, bank, emision_date, stimate_collection_date, cheque_value, observations)
+                INSERT INTO checks (id_payment, check_number, id_emission_bank, emission_date, stimate_collection_date, amount, observations)
                 VALUES (%s, %s, %s, %s, %s, %s, %s);
             """, (
-                id_payment, cheque_number, bank, emision_date, stimate_collection_date, cheque_value, observations
+                id_payment, cheque_number, id_emission_bank, emission_date, stimate_collection_date, amount, observations
             ))
 
         conn.commit()
@@ -1190,7 +1240,7 @@ def crear_nuevo_cliente(
                 phone,
                 phone_2,
                 city,
-                deparment,
+                department,
                 address
             )
             VALUES (
@@ -1255,7 +1305,7 @@ def crear_plan_letras(
     total_amount: float,
     start_date: str,
     frequency: str,
-    letra_number: int,
+    letter_number: int,
     notes: str = None
 ) -> str:
     """
@@ -1268,7 +1318,7 @@ def crear_plan_letras(
         total_amount (float): Monto total del plan
         start_date (str): Fecha de inicio en formato YYYY-MM-DD
         frequency (str): Frecuencia de pago (Mensual, Quincenal, Semanal, etc.)
-        letra_number (int): Número de la letra
+        letter_number (int): Número de la letra
         notes (str, optional): Notas adicionales del plan
     
     Returns:
@@ -1299,8 +1349,8 @@ def crear_plan_letras(
             conn.close()
             return f"❌ No se encontró la orden de venta con ID {id_sales_orders}."
         
-        # Validar letra_number
-        if not isinstance(letra_number, int) or letra_number <= 0:
+        # Validar letter_number
+        if not isinstance(letter_number, int) or letter_number <= 0:
             return "❌ El número de letra debe ser un número entero positivo."
         
         # Calcular monto por cuota
@@ -1366,16 +1416,16 @@ def crear_plan_letras(
         
         # Crear la letra
         cursor.execute("""
-            INSERT INTO letras (
+            INSERT INTO letters (
                 id_payment_plan,
-                letra_number,
+                letter_number,
                 last_date,
                 status
             )
             VALUES (
                 %s, %s, %s, 'Pendiente'
             );
-        """, (id_payment_plan, letra_number, due_date.strftime('%Y-%m-%d')))
+        """, (id_payment_plan, letter_number, due_date.strftime('%Y-%m-%d')))
         
         conn.commit()
         conn.close()
@@ -1390,7 +1440,7 @@ def crear_plan_letras(
             f"📅 Fecha de inicio: {start_date}\n"
             f"🔄 Frecuencia: {frequency}\n"
             f"📝 Tipo: Letra\n"
-            f"📄 Número de letra: {letra_number}\n"
+            f"📄 Número de letra: {letter_number}\n"
             f"📋 Estado: Pendiente"
         )
         
@@ -1652,31 +1702,31 @@ def gestionar_caja_conciliaciones(accion: str, tipo: str, saldo_caja: float = No
         if accion.lower() == "consultar":
             if tipo.lower() == "caja":
                 # Consultar solo fila 1 (caja)
-                query = "SELECT id, saldo_inicial, estado_caj FROM estado_caja WHERE id = 1"
+                query = "SELECT id, amount, status FROM status_caja WHERE id = 1"
                 cursor.execute(query)
                 result = cursor.fetchone()
                 conn.close()
                 
                 if result:
-                    id_fila, saldo_inicial, estado_caj = result
-                    estado_texto = "Abierta" if estado_caj else "Cerrada"
-                    return f"📊 Estado actual de la caja:\n🔧 Estado: {estado_texto}\n💰 Saldo inicial: ${saldo_inicial:,.2f}"
+                    id_fila, amount, status = result
+                    estado_texto = "Abierta" if status else "Cerrada"
+                    return f"📊 Estado actual de la caja:\n🔧 Estado: {estado_texto}\n💰 Saldo inicial: ${amount:,.2f}"
                 else:
                     return "❌ No se encontró información de la caja"
                     
             elif tipo.lower() == "conciliaciones":
                 # Consultar filas 2 (Davivienda) y 3 (Bancolombia)
-                query = "SELECT id, saldo_inicial, estado_caj FROM estado_caja WHERE id IN (2, 3) ORDER BY id"
+                query = "SELECT id, amount, status FROM status_caja WHERE id IN (2, 3) ORDER BY id"
                 cursor.execute(query)
                 results = cursor.fetchall()
                 conn.close()
                 
                 if results:
                     response = "📊 Estado actual de las conciliaciones:\n"
-                    for id_fila, saldo_inicial, estado_caj in results:
+                    for id_fila, amount, status in results:
                         banco = "Davivienda" if id_fila == 2 else "Bancolombia"
-                        estado_texto = "Abierta" if estado_caj else "Cerrada"
-                        response += f"🏦 {banco}:\n   🔧 Estado: {estado_texto}\n   💰 Saldo inicial: ${saldo_inicial:,.2f}\n"
+                        estado_texto = "Abierta" if status else "Cerrada"
+                        response += f"🏦 {banco}:\n   🔧 Estado: {estado_texto}\n   💰 Saldo inicial: ${amount:,.2f}\n"
                     return response
                 else:
                     return "❌ No se encontró información de las conciliaciones"
@@ -1706,9 +1756,9 @@ def gestionar_caja_conciliaciones(accion: str, tipo: str, saldo_caja: float = No
         
         # Determinar el estado según la acción
         if accion.lower() == "abrir":
-            estado_caj = True
+            status = True
         elif accion.lower() == "cerrar":
-            estado_caj = False
+            status = False
         else:
             conn.close()
             return "❌ Acción inválida. Debe ser 'abrir' o 'cerrar'."
@@ -1728,29 +1778,29 @@ def gestionar_caja_conciliaciones(accion: str, tipo: str, saldo_caja: float = No
         
         print(f"🔧 Filas a actualizar: {ids_to_update}")
         print(f"🔧 Saldos a usar: {saldos}")
-        print(f"🔧 Estado final: {estado_caj}")
+        print(f"🔧 Estado final: {status}")
         
         # Ejecutar las actualizaciones
         for i, id_fila in enumerate(ids_to_update):
             query = """
-                INSERT INTO estado_caja
-                (id, saldo_inicial, estado_caj)
+                INSERT INTO status_caja
+                (id, amount, status)
                 VALUES (%s, %s, %s)
                 ON CONFLICT (id) DO UPDATE
                 SET 
-                    saldo_inicial = EXCLUDED.saldo_inicial,
+                    amount = EXCLUDED.amount,
                     updated_at = NOW(),
-                    estado_caj = EXCLUDED.estado_caj
+                    status = EXCLUDED.status
             """
             
-            print(f"🔧 Actualizando fila {id_fila} con saldo: {saldos[i]}, estado_caj: {estado_caj}")
+            print(f"🔧 Actualizando fila {id_fila} con saldo: {saldos[i]}, status: {status}")
             print(f"🔧 Query SQL: {query}")
-            print(f"🔧 Parámetros: id={id_fila}, saldo={saldos[i]}, estado_caj={estado_caj}")
+            print(f"🔧 Parámetros: id={id_fila}, saldo={saldos[i]}, status={status}")
             
-            cursor.execute(query, (id_fila, saldos[i], estado_caj))
+            cursor.execute(query, (id_fila, saldos[i], status))
             
             # Verificar que la actualización fue exitosa
-            verify_query = "SELECT id, saldo_inicial, estado_caj FROM estado_caja WHERE id = %s"
+            verify_query = "SELECT id, amount, status FROM status_caja WHERE id = %s"
             cursor.execute(verify_query, (id_fila,))
             result = cursor.fetchone()
             print(f"✅ Fila {id_fila} actualizada exitosamente - Verificación: {result}")
@@ -1759,7 +1809,7 @@ def gestionar_caja_conciliaciones(accion: str, tipo: str, saldo_caja: float = No
         conn.close()
         
         # Determinar el texto del estado para mostrar
-        estado_texto = "Abierta" if estado_caj else "Cerrada"
+        estado_texto = "Abierta" if status else "Cerrada"
         
         # Construir mensaje según el tipo y la acción
         if tipo.lower() == "caja":
