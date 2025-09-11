@@ -307,11 +307,11 @@ class WebhookHandler:
         """Obtiene los números de teléfono autorizados dinámicamente"""
         try:
             # Importar la herramienta aquí para evitar dependencias circulares
-#            from app.core.tools import obtener_telefono_usuario_id2
+            from app.core.tools import obtener_telefono_usuario_id2
             
             # Obtener todos los usuarios activos
- #           #usuarios_activos = obtener_telefono_usuario_id2("")
-            usuarios_activos = [573172288329]
+            usuarios_activos = obtener_telefono_usuario_id2("")
+           
             # Verificar si se obtuvieron usuarios activos
             if usuarios_activos and not usuarios_activos.startswith("❌"):
                 # Extraer teléfonos de la respuesta
