@@ -2142,5 +2142,3 @@ def crear_usuario_agent(nombre: str, telefono: str, tipo: str = "Secundario") ->
         error_msg = f"Error creando usuario: {str(e)}"
         print(f"❌ {error_msg}")
         return error_msg
-/*
-
