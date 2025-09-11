@@ -9,9 +9,9 @@ load_dotenv()
 def get_db_connection():
     try:
         return psycopg2.connect(
-            user="postgres.jhgvhzxcxyxaiixnqprj",
-            password="Omnion2025_",
-            host="aws-0-us-east-2.pooler.supabase.com",
+            user="postgres.rixvqufnzasolxxklaue",
+            password="Socomac2025_",
+            host="aws-1-us-east-2.pooler.supabase.com",
             port=6543,
             dbname="postgres",
             client_encoding='utf8'
