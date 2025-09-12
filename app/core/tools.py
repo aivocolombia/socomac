@@ -606,12 +606,9 @@ def registrar_pago(
             if not id_destiny_bank:
                 return f"❌ No se encontró el banco destino '{destiny_bank_name}' en la base de datos."
             
-            # Obtener ID del banco de emisión si se proporciona
+            # Para transferencias, el banco de emisión puede ser cualquiera
+            # No se valida contra la tabla banks ya que puede ser cualquier banco
             id_emission_bank = None
-            if emission_bank:
-                id_emission_bank = get_bank_id(emission_bank)
-                if not id_emission_bank:
-                    return f"❌ No se encontró el banco de emisión '{emission_bank}' en la base de datos."
             
             trans_value = amount  # Copiar automáticamente
 
@@ -819,12 +816,9 @@ def registrar_pago_directo_orden(
             if not id_destiny_bank:
                 return f"❌ No se encontró el banco destino '{destiny_bank_name}' en la base de datos."
             
-            # Obtener ID del banco de emisión si se proporciona
+            # Para transferencias asociadas a órdenes de venta, el banco de emisión puede ser cualquiera
+            # No se valida contra la tabla banks ya que puede ser cualquier banco
             id_emission_bank = None
-            if emission_bank:
-                id_emission_bank = get_bank_id(emission_bank)
-                if not id_emission_bank:
-                    return f"❌ No se encontró el banco de emisión '{emission_bank}' en la base de datos."
             
             trans_value = amount  # Copiar automáticamente
 
