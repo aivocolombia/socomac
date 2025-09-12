@@ -626,7 +626,7 @@ def registrar_pago(
         
         # === Insertar en payments ===
         cursor.execute("""
-            INSERT INTO payments (id_sales_orders, id_payment_installment, amount, payment_method, payment_date, id_destiny_bank, caja_receipt, id_client)
+            INSERT INTO payments (id_sales_orders, id_payment_installment, amount, type, payment_date, id_destiny_bank, caja_receipt, id_client)
             VALUES (%s, %s, %s, %s, CURRENT_DATE, %s, %s, %s)
             RETURNING id_payment;
         """, (
@@ -839,7 +839,7 @@ def registrar_pago_directo_orden(
         
         # === Insertar en payments con id_payment_installment = NULL ===
         cursor.execute("""
-            INSERT INTO payments (id_sales_orders, id_payment_installment, amount, payment_method, payment_date, id_destiny_bank, caja_receipt, id_client)
+            INSERT INTO payments (id_sales_orders, id_payment_installment, amount, type, payment_date, id_destiny_bank, caja_receipt, id_client)
             VALUES (%s, NULL, %s, %s, CURRENT_DATE, %s, %s, %s)
             RETURNING id_payment;
         """, (
