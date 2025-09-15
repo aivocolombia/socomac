@@ -1412,13 +1412,14 @@ def crear_plan_letras(
             INSERT INTO letters (
                 id_payment_plan,
                 letter_number,
-                last_date,
-                status
+                due_date,
+                amount,
+                id_status
             )
             VALUES (
-                %s, %s, %s, 'Pendiente'
+                %s, %s, %s, %s, %s
             );
-        """, (id_payment_plan, letter_number, due_date.strftime('%Y-%m-%d')))
+        """, (id_payment_plan, letter_number, due_date.strftime('%Y-%m-%d'), total_amount, 9))
         
         conn.commit()
         conn.close()
