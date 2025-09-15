@@ -367,11 +367,9 @@ def cuotas_pendientes_por_plan(id_payment_plan: int) -> str:
                 pi.id_payment_plan,
                 pi.amount,
                 COALESCE(pi.pay_amount, 0),
-                TO_CHAR(pi.due_date, 'DD/MM/YYYY'),
-                pi.status
+                TO_CHAR(pi.due_date, 'DD/MM/YYYY')
             FROM public.payment_installment AS pi
             WHERE pi.id_payment_plan = %s
-              AND pi.status = 'Pendiente'
             ORDER BY pi.installment_number ASC;
         """
         cursor.execute(query, (id_payment_plan,))
@@ -386,7 +384,7 @@ def cuotas_pendientes_por_plan(id_payment_plan: int) -> str:
         cuotas_map = {}
 
         lines = []
-        for num_installment, id_real, id_plan, amount, pay_amount, due_date, status in rows:
+        for num_installment, id_real, id_plan, amount, pay_amount, due_date in rows:
             cuotas_map[num_installment] = {
                 "id_payment_installment": id_real,
                 "id_payment_plan": id_plan
@@ -394,7 +392,7 @@ def cuotas_pendientes_por_plan(id_payment_plan: int) -> str:
             lines.append(
                 f"Nro: {num_installment} | 🆔 ID real (id_payment_installment): {id_real} "
                 f"| 🪙 ID plan: {id_plan} | 💰 Monto total: {amount} | "
-                f"💵 Pagado: {pay_amount} | 📅 Vence: {due_date} | Estado: {status}"
+                f"💵 Pagado: {pay_amount} | 📅 Vence: {due_date}"
             )
 
         return "\n".join(lines)
@@ -1124,11 +1122,10 @@ def crear_plan_financiamiento(
                     id_payment_plan,
                     installment_number,
                     amount,
-                    due_date,
-                    status
+                    due_date
                 )
                 VALUES (
-                    %s, %s, %s, %s, 'Pendiente'
+                    %s, %s, %s, %s
                 );
             """, (id_payment_plan, i, amount_per_installment, due_date.strftime('%Y-%m-%d')))
         
@@ -1397,11 +1394,10 @@ def crear_plan_letras(
                     id_payment_plan,
                     installment_number,
                     amount,
-                    due_date,
-                    status
+                    due_date
                 )
                 VALUES (
-                    %s, %s, %s, %s, 'Pendiente'
+                    %s, %s, %s, %s
                 );
             """, (id_payment_plan, i, amount_per_installment, due_date.strftime('%Y-%m-%d')))
         
