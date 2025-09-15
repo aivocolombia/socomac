@@ -1032,7 +1032,7 @@ def crear_plan_financiamiento(
     start_date: str,
     frequency: str,
     notes: str = None,
-    type_payment_plan: str = "Otro plan de financiamiento"
+    type_payment_plan: str = "Financiamiento"
 ) -> str:
     """
     Crea un plan de financiamiento para una orden de venta específica.
@@ -1044,7 +1044,7 @@ def crear_plan_financiamiento(
         start_date (str): Fecha de inicio en formato YYYY-MM-DD
         frequency (str): Frecuencia de pago (Mensual, Quincenal, Semanal, etc.)
         notes (str, optional): Notas adicionales del plan
-        type_payment_plan (str, optional): Tipo de plan de pago. Default "Otro plan de financiamiento"
+        type_payment_plan (str, optional): Tipo de plan de pago. Default "Financiamiento"
     
     Returns:
         str: ID del plan creado o mensaje de error
@@ -1086,17 +1086,22 @@ def crear_plan_financiamiento(
                 start_date,
                 frequency,
                 notes,
-                type_payment_plan
+                type_payment_plan,
+                id_status
             )
             VALUES (
-                %s, %s, %s, %s, %s, %s, %s
+                %s, %s, %s, %s, %s, %s, %s, %s
             )
             RETURNING id_payment_plan;
         """
         
+        # Cambiar "Otro plan de financiamiento" por "Financiamiento"
+        if type_payment_plan == "Otro plan de financiamiento":
+            type_payment_plan = "Financiamiento"
+        
         cursor.execute(query, (
             id_sales_orders, num_installments, total_amount, start_date, 
-            frequency, notes, type_payment_plan
+            frequency, notes, type_payment_plan, 9
         ))
         
         id_payment_plan = cursor.fetchone()[0]
@@ -1356,10 +1361,11 @@ def crear_plan_letras(
                 start_date,
                 frequency,
                 notes,
-                type_payment_plan
+                type_payment_plan,
+                id_status
             )
             VALUES (
-                %s, %s, %s, %s, %s, %s, %s
+                %s, %s, %s, %s, %s, %s, %s, %s
             )
             RETURNING id_payment_plan;
         """
@@ -1368,7 +1374,7 @@ def crear_plan_letras(
         
         cursor.execute(query, (
             id_sales_orders, num_installments, total_amount, start_date, 
-            frequency, notes, type_payment_plan
+            frequency, notes, type_payment_plan, 9
         ))
         
         id_payment_plan = cursor.fetchone()[0]
