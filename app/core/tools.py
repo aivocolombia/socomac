@@ -249,14 +249,11 @@ def planes_pago_pendientes_por_cliente(id_cliente: int) -> str:
                 pp.id_sales_orders,
                 pp.num_installments,
                 pp.total_amount,
-                pp.status,
-                pp.pending_amount,
                 pp.type_payment_plan
             FROM public.payment_plan pp
             JOIN public.sales_orders so 
                 ON so.id_sales_orders = pp.id_sales_orders
             WHERE so.id_client = %s
-              AND pp.status = 'Pendiente'
             ORDER BY pp.created_at DESC;
         """
 
@@ -269,11 +266,10 @@ def planes_pago_pendientes_por_cliente(id_cliente: int) -> str:
 
         # Formato de salida
         lines = []
-        for rid_plan, rid_order, num_inst, total_amt, status, pending_amt, type_plan in rows:
+        for rid_plan, rid_order, num_inst, total_amt, type_plan in rows:
             lines.append(
                 f"📋 Plan: {rid_plan} | 🛒 Orden: {rid_order} | "
                 f"Cuotas: {num_inst} | 💰 Total: {total_amt} | "
-                f"Estado: {status} | ⏳ Pendiente: {pending_amt} | "
                 f"Tipo: {type_plan}"
             )
 
@@ -307,13 +303,20 @@ def montos_a_favor_por_cliente(id_cliente: int) -> str:
             SELECT 
                 pp.id_payment_plan,
                 pp.id_sales_orders,
-                pp.pending_amount
+                pp.total_amount,
+                COALESCE(SUM(p.amount), 0) as total_paid
             FROM public.payment_plan pp
             JOIN public.sales_orders so 
                 ON so.id_sales_orders = pp.id_sales_orders
+            LEFT JOIN public.payments p 
+                ON p.id_payment_installment IN (
+                    SELECT pi.id_payment_installment 
+                    FROM public.payment_installment pi 
+                    WHERE pi.id_payment_plan = pp.id_payment_plan
+                )
             WHERE so.id_client = %s
-              AND pp.status = 'Pagado'
-              AND pp.pending_amount > 0
+            GROUP BY pp.id_payment_plan, pp.id_sales_orders, pp.total_amount
+            HAVING COALESCE(SUM(p.amount), 0) > pp.total_amount
             ORDER BY pp.created_at DESC;
         """
 
@@ -326,9 +329,10 @@ def montos_a_favor_por_cliente(id_cliente: int) -> str:
 
         # Formato de salida
         lines = []
-        for rid_plan, rid_order, pending_amt in rows:
+        for rid_plan, rid_order, total_amount, total_paid in rows:
+            amount_favor = total_paid - total_amount
             lines.append(
-                f"📋 Plan: {rid_plan} | 🛒 Orden: {rid_order} | 💵 Monto a favor: {pending_amt}"
+                f"📋 Plan: {rid_plan} | 🛒 Orden: {rid_order} | 💵 Monto a favor: {amount_favor}"
             )
 
         return "\n".join(lines)
@@ -1084,21 +1088,17 @@ def crear_plan_financiamiento(
                 start_date,
                 frequency,
                 notes,
-                pending_amount,
-                type_payment_plan,
-                status
+                type_payment_plan
             )
             VALUES (
-                %s, %s, %s, %s, %s, %s, %s, %s, 'Pendiente'
+                %s, %s, %s, %s, %s, %s, %s
             )
             RETURNING id_payment_plan;
         """
         
-        pending_amount = total_amount * (-1)  # Monto pendiente negativo
-        
         cursor.execute(query, (
             id_sales_orders, num_installments, total_amount, start_date, 
-            frequency, notes, pending_amount, type_payment_plan
+            frequency, notes, type_payment_plan
         ))
         
         id_payment_plan = cursor.fetchone()[0]
@@ -1359,22 +1359,19 @@ def crear_plan_letras(
                 start_date,
                 frequency,
                 notes,
-                pending_amount,
-                type_payment_plan,
-                status
+                type_payment_plan
             )
             VALUES (
-                %s, %s, %s, %s, %s, %s, %s, %s, 'Pendiente'
+                %s, %s, %s, %s, %s, %s, %s
             )
             RETURNING id_payment_plan;
         """
         
-        pending_amount = total_amount * (-1)  # Monto pendiente negativo
         type_payment_plan = "Letra"
         
         cursor.execute(query, (
             id_sales_orders, num_installments, total_amount, start_date, 
-            frequency, notes, pending_amount, type_payment_plan
+            frequency, notes, type_payment_plan
         ))
         
         id_payment_plan = cursor.fetchone()[0]
