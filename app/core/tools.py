@@ -1444,6 +1444,165 @@ def crear_plan_letras(
         return error_msg
 
 @tool
+def crear_plan_cheque(
+    id_sales_orders: int,
+    num_installments: int,
+    total_amount: float,
+    start_date: str,
+    frequency: str,
+    check_number: str,
+    stimate_collection_date: str,
+    notes: str = None
+) -> str:
+    """
+    Crea un plan de financiamiento tipo "Cheque" para una orden de venta específica.
+    Crea el payment_plan, los payment_installment y el cheque correspondiente.
+    
+    Args:
+        id_sales_orders (int): ID de la orden de venta
+        num_installments (int): Número de cuotas
+        total_amount (float): Monto total del plan
+        start_date (str): Fecha de inicio en formato YYYY-MM-DD
+        frequency (str): Frecuencia de pago (Mensual, Quincenal, Semanal, etc.)
+        check_number (str): Número del cheque
+        stimate_collection_date (str): Fecha estimada de cobro en formato YYYY-MM-DD
+        notes (str, optional): Notas adicionales del plan
+    
+    Returns:
+        str: ID del plan creado o mensaje de error
+    """
+    try:
+        if not isinstance(id_sales_orders, int) or id_sales_orders <= 0:
+            return "❌ El ID de la orden de venta debe ser un número entero positivo."
+        
+        if not isinstance(num_installments, int) or num_installments <= 0:
+            return "❌ El número de cuotas debe ser un número entero positivo."
+        
+        if not isinstance(total_amount, (int, float)) or total_amount <= 0:
+            return "❌ El monto total debe ser un número mayor que 0."
+        
+        # Validar formato de fecha
+        try:
+            datetime.strptime(start_date, '%Y-%m-%d')
+            datetime.strptime(stimate_collection_date, '%Y-%m-%d')
+        except ValueError:
+            return "❌ Las fechas deben estar en formato YYYY-MM-DD."
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Verificar que la orden de venta existe
+        cursor.execute("SELECT id_sales_orders FROM sales_orders WHERE id_sales_orders = %s", (id_sales_orders,))
+        if not cursor.fetchone():
+            conn.close()
+            return f"❌ No se encontró la orden de venta con ID {id_sales_orders}."
+        
+        # Validar check_number
+        if not check_number or not check_number.strip():
+            return "❌ El número de cheque es obligatorio."
+        
+        # Calcular monto por cuota
+        amount_per_installment = total_amount / num_installments
+        
+        # Insertar el plan de financiamiento tipo "Cheque"
+        query = """
+            INSERT INTO payment_plan (
+                id_sales_orders,
+                num_installments,
+                total_amount,
+                start_date,
+                frequency,
+                notes,
+                type_payment_plan,
+                id_status
+            )
+            VALUES (
+                %s, %s, %s, %s, %s, %s, %s, %s
+            )
+            RETURNING id_payment_plan;
+        """
+        
+        type_payment_plan = "Cheque"
+        
+        cursor.execute(query, (
+            id_sales_orders, num_installments, total_amount, start_date, 
+            frequency, notes, type_payment_plan, 9
+        ))
+        
+        id_payment_plan = cursor.fetchone()[0]
+        
+        # Crear las cuotas automáticamente
+        start_date_obj = datetime.strptime(start_date, '%Y-%m-%d')
+        last_due_date = None
+        
+        for i in range(1, num_installments + 1):
+            # Calcular fecha de vencimiento según la frecuencia
+            if frequency.lower() == "mensual":
+                due_date = start_date_obj + timedelta(days=30 * i)
+            elif frequency.lower() == "quincenal":
+                due_date = start_date_obj + timedelta(days=15 * i)
+            elif frequency.lower() == "semanal":
+                due_date = start_date_obj + timedelta(weeks=i)
+            else:
+                # Por defecto, mensual
+                due_date = start_date_obj + timedelta(days=30 * i)
+            
+            # Guardar la última fecha de vencimiento
+            last_due_date = due_date
+            
+            # Insertar la cuota
+            cursor.execute("""
+                INSERT INTO payment_installment (
+                    id_payment_plan,
+                    installment_number,
+                    amount,
+                    due_date
+                )
+                VALUES (
+                    %s, %s, %s, %s
+                );
+            """, (id_payment_plan, i, amount_per_installment, due_date.strftime('%Y-%m-%d')))
+        
+        # Crear el cheque
+        cursor.execute("""
+            INSERT INTO checks (
+                id_payment_plan,
+                check_number,
+                due_date,
+                amount,
+                stimate_collection_date,
+                type
+            )
+            VALUES (
+                %s, %s, %s, %s, %s, %s
+            );
+        """, (id_payment_plan, check_number, last_due_date.strftime('%Y-%m-%d'), total_amount, stimate_collection_date, "Financiado"))
+        
+        conn.commit()
+        conn.close()
+        
+        return (
+            f"✅ Plan de cheque creado exitosamente.\n"
+            f"🆔 ID del plan: {id_payment_plan}\n"
+            f"🛒 Orden de venta: {id_sales_orders}\n"
+            f"📊 Número de cuotas: {num_installments}\n"
+            f"💰 Monto total: {total_amount}\n"
+            f"💵 Monto por cuota: {amount_per_installment:.2f}\n"
+            f"📅 Fecha de inicio: {start_date}\n"
+            f"🔄 Frecuencia: {frequency}\n"
+            f"📝 Tipo: Cheque\n"
+            f"📄 Número de cheque: {check_number}\n"
+            f"📅 Fecha estimada de cobro: {stimate_collection_date}\n"
+            f"📅 Fecha de vencimiento: {last_due_date.strftime('%Y-%m-%d')}\n"
+            f"📋 Estado: Pendiente"
+        )
+        
+    except Exception as e:
+        error_msg = f"❌ Error al crear el plan de cheque: {str(e)}"
+        print(f"❌ {error_msg}")
+        return error_msg
+
+@tool
 def consultar_detalles_ordenes_cliente(id_client: int) -> str:
     """
     Consulta todos los detalles de órdenes de venta de un cliente específico, mostrando información completa
