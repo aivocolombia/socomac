@@ -645,7 +645,7 @@ def registrar_pago(
             amount = cheque_value
 
         # === Determinar valor de caja_receipt ===
-        caja_receipt = 'Yes' if metodo_pago == "efectivo" else None
+        caja_receipt = 'Yes' if metodo_pago == "efectivo" else 'No'
         
         # === Insertar en payments ===
         cursor.execute("""
@@ -668,11 +668,19 @@ def registrar_pago(
             ))
 
         elif metodo_pago == "cheque":
+            # Obtener id_payment_plan desde id_payment_installment
             cursor.execute("""
-                INSERT INTO checks (id_payment, check_number, id_emission_bank_2, emission_date, stimate_collection_date, amount, created_at, updated_at)
-                VALUES (%s, %s, %s, %s, %s, %s, NOW(), NOW());
+                SELECT id_payment_plan FROM payment_installment 
+                WHERE id_payment_installment = %s
+            """, (id_payment_installment,))
+            result = cursor.fetchone()
+            id_payment_plan = result[0] if result else None
+            
+            cursor.execute("""
+                INSERT INTO checks (id_payment, check_number, id_emission_bank_2, emission_date, stimate_collection_date, amount, id_payment_plan, type, created_at, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW());
             """, (
-                id_payment, cheque_number, 1, emission_date, stimate_collection_date, amount
+                id_payment, cheque_number, 1, emission_date, stimate_collection_date, amount, id_payment_plan, "Directo"
             ))
 
         # === Actualizar pay_amount en la cuota ===
@@ -863,7 +871,7 @@ def registrar_pago_directo_orden(
             id_emission_bank = None
 
         # === Determinar valor de caja_receipt ===
-        caja_receipt = 'Yes' if metodo_pago == "efectivo" else None
+        caja_receipt = 'Yes' if metodo_pago == "efectivo" else 'No'
         
         # === Insertar en payments con id_payment_installment = NULL ===
         cursor.execute("""
@@ -887,10 +895,10 @@ def registrar_pago_directo_orden(
 
         elif metodo_pago == "cheque":
             cursor.execute("""
-                INSERT INTO checks (id_payment, check_number, id_emission_bank_2, emission_date, stimate_collection_date, amount, created_at, updated_at)
-                VALUES (%s, %s, %s, %s, %s, %s, NOW(), NOW());
+                INSERT INTO checks (id_payment, check_number, id_emission_bank_2, emission_date, stimate_collection_date, amount, type, created_at, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, NOW(), NOW());
             """, (
-                id_payment, cheque_number, 1, emision_date, stimate_collection_date, amount
+                id_payment, cheque_number, 1, emision_date, stimate_collection_date, amount, "Directo"
             ))
 
         conn.commit()
