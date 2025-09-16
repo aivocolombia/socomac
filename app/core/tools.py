@@ -649,8 +649,8 @@ def registrar_pago(
         
         # === Insertar en payments ===
         cursor.execute("""
-            INSERT INTO payments (id_sales_orders, id_payment_installment, amount, type, payment_date, id_destiny_bank, caja_receipt, id_client)
-            VALUES (%s, %s, %s, %s, CURRENT_DATE, %s, %s, %s)
+            INSERT INTO payments (id_sales_orders, id_payment_installment, amount, type, payment_date, id_destiny_bank, caja_receipt, id_client, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, CURRENT_DATE, %s, %s, %s, NOW(), NOW())
             RETURNING id_payment;
         """, (
             id_sales_orders, id_payment_installment, amount, metodo_pago.capitalize(), 
@@ -661,16 +661,16 @@ def registrar_pago(
         # === Insertar en tabla específica según método ===
         if metodo_pago == "transferencia":
             cursor.execute("""
-                INSERT INTO transfers (id_payment, proof_number, id_emission_bank, emission_date, trans_value, id_destiny_bank, observations)
-                VALUES (%s, %s, %s, %s, %s, %s, %s);
+                INSERT INTO transfers (id_payment, proof_number, id_emission_bank, emission_date, trans_value, id_destiny_bank, observations, created_at, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, NOW(), NOW());
             """, (
                 id_payment, proof_number, id_emission_bank, emission_date, trans_value, id_destiny_bank, observations
             ))
 
         elif metodo_pago == "cheque":
             cursor.execute("""
-                INSERT INTO checks (id_payment, check_number, id_emission_bank, emission_date, stimate_collection_date, amount, observations)
-                VALUES (%s, %s, %s, %s, %s, %s, %s);
+                INSERT INTO checks (id_payment, check_number, id_emission_bank, emission_date, stimate_collection_date, amount, observations, created_at, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, NOW(), NOW());
             """, (
                 id_payment, cheque_number, id_emission_bank, emission_date, stimate_collection_date, amount, observations
             ))
@@ -678,7 +678,7 @@ def registrar_pago(
         # === Actualizar pay_amount en la cuota ===
         cursor.execute("""
             UPDATE payment_installment
-            SET pay_amount = COALESCE(pay_amount, 0) + %s
+            SET pay_amount = COALESCE(pay_amount, 0) + %s, updated_at = NOW()
             WHERE id_payment_installment = %s
             RETURNING pay_amount;
         """, (amount, id_payment_installment))
@@ -745,10 +745,12 @@ def crear_orden_venta(
                     id_classification,
                     order_date,
                     total,
-                    discount
+                    discount,
+                    created_at,
+                    updated_at
                 )
                 VALUES (
-                    %s, %s, CURRENT_DATE, %s, %s
+                    %s, %s, CURRENT_DATE, %s, %s, NOW(), NOW()
                 )
                 RETURNING id_sales_orders;
             """
@@ -760,10 +762,12 @@ def crear_orden_venta(
                     id_classification,
                     order_date,
                     total,
-                    discount
+                    discount,
+                    created_at,
+                    updated_at
                 )
                 VALUES (
-                    %s, %s, %s, %s, %s
+                    %s, %s, %s, %s, %s, NOW(), NOW()
                 )
                 RETURNING id_sales_orders;
             """
@@ -859,8 +863,8 @@ def registrar_pago_directo_orden(
         
         # === Insertar en payments con id_payment_installment = NULL ===
         cursor.execute("""
-            INSERT INTO payments (id_sales_orders, id_payment_installment, amount, type, payment_date, id_destiny_bank, caja_receipt, id_client)
-            VALUES (%s, NULL, %s, %s, CURRENT_DATE, %s, %s, %s)
+            INSERT INTO payments (id_sales_orders, id_payment_installment, amount, type, payment_date, id_destiny_bank, caja_receipt, id_client, created_at, updated_at)
+            VALUES (%s, NULL, %s, %s, CURRENT_DATE, %s, %s, %s, NOW(), NOW())
             RETURNING id_payment;
         """, (
             id_sales_orders, amount, metodo_pago.capitalize(), 
@@ -871,16 +875,16 @@ def registrar_pago_directo_orden(
         # === Insertar en tabla específica según método ===
         if metodo_pago == "transferencia":
             cursor.execute("""
-                INSERT INTO transfers (id_payment, proof_number, id_emission_bank, emission_date, trans_value, id_destiny_bank, observations)
-                VALUES (%s, %s, %s, %s, %s, %s, %s);
+                INSERT INTO transfers (id_payment, proof_number, id_emission_bank, emission_date, trans_value, id_destiny_bank, observations, created_at, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, NOW(), NOW());
             """, (
                 id_payment, proof_number, id_emission_bank, emission_date, trans_value, id_destiny_bank, observations
             ))
 
         elif metodo_pago == "cheque":
             cursor.execute("""
-                INSERT INTO checks (id_payment, check_number, id_emission_bank, emission_date, stimate_collection_date, amount, observations)
-                VALUES (%s, %s, %s, %s, %s, %s, %s);
+                INSERT INTO checks (id_payment, check_number, id_emission_bank, emission_date, stimate_collection_date, amount, observations, created_at, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, NOW(), NOW());
             """, (
                 id_payment, cheque_number, id_emission_bank, emission_date, stimate_collection_date, amount, observations
             ))
@@ -957,10 +961,12 @@ def agregar_detalle_orden_venta(
                 id_product,
                 quantity,
                 unit_price,
-                subtotal
+                subtotal,
+                created_at,
+                updated_at
             )
             VALUES (
-                %s, %s, %s, %s, %s
+                %s, %s, %s, %s, %s, NOW(), NOW()
             )
             RETURNING id_sales_order_detail;
         """
@@ -1111,10 +1117,12 @@ def crear_plan_financiamiento(
                 frequency,
                 notes,
                 type_payment_plan,
-                id_status
+                id_status,
+                created_at,
+                updated_at
             )
             VALUES (
-                %s, %s, %s, %s, %s, %s, %s, %s
+                %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW()
             )
             RETURNING id_payment_plan;
         """
@@ -1151,10 +1159,12 @@ def crear_plan_financiamiento(
                     id_payment_plan,
                     installment_number,
                     amount,
-                    due_date
+                    due_date,
+                    created_at,
+                    updated_at
                 )
                 VALUES (
-                    %s, %s, %s, %s
+                    %s, %s, %s, %s, NOW(), NOW()
                 );
             """, (id_payment_plan, i, amount_per_installment, due_date.strftime('%Y-%m-%d')))
         
@@ -1261,10 +1271,12 @@ def crear_nuevo_cliente(
                 phone_2,
                 city,
                 department,
-                address
+                address,
+                created_at,
+                updated_at
             )
             VALUES (
-                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW()
             )
             RETURNING id_client;
         """
@@ -1386,10 +1398,12 @@ def crear_plan_letras(
                 frequency,
                 notes,
                 type_payment_plan,
-                id_status
+                id_status,
+                created_at,
+                updated_at
             )
             VALUES (
-                %s, %s, %s, %s, %s, %s, %s, %s
+                %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW()
             )
             RETURNING id_payment_plan;
         """
@@ -1424,10 +1438,12 @@ def crear_plan_letras(
                     id_payment_plan,
                     installment_number,
                     amount,
-                    due_date
+                    due_date,
+                    created_at,
+                    updated_at
                 )
                 VALUES (
-                    %s, %s, %s, %s
+                    %s, %s, %s, %s, NOW(), NOW()
                 );
             """, (id_payment_plan, i, amount_per_installment, due_date.strftime('%Y-%m-%d')))
         
@@ -1438,10 +1454,12 @@ def crear_plan_letras(
                 letter_number,
                 due_date,
                 amount,
-                id_status
+                id_status,
+                created_at,
+                updated_at
             )
             VALUES (
-                %s, %s, %s, %s, %s
+                %s, %s, %s, %s, %s, NOW(), NOW()
             );
         """, (id_payment_plan, letter_number, due_date.strftime('%Y-%m-%d'), total_amount, 9))
         
@@ -1538,10 +1556,12 @@ def crear_plan_cheque(
                 frequency,
                 notes,
                 type_payment_plan,
-                id_status
+                id_status,
+                created_at,
+                updated_at
             )
             VALUES (
-                %s, %s, %s, %s, %s, %s, %s, %s
+                %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW()
             )
             RETURNING id_payment_plan;
         """
@@ -1580,10 +1600,12 @@ def crear_plan_cheque(
                     id_payment_plan,
                     installment_number,
                     amount,
-                    due_date
+                    due_date,
+                    created_at,
+                    updated_at
                 )
                 VALUES (
-                    %s, %s, %s, %s
+                    %s, %s, %s, %s, NOW(), NOW()
                 );
             """, (id_payment_plan, i, amount_per_installment, due_date.strftime('%Y-%m-%d')))
         
@@ -1595,10 +1617,12 @@ def crear_plan_cheque(
                 due_date,
                 amount,
                 stimate_collection_date,
-                type
+                type,
+                created_at,
+                updated_at
             )
             VALUES (
-                %s, %s, %s, %s, %s, %s
+                %s, %s, %s, %s, %s, %s, NOW(), NOW()
             );
         """, (id_payment_plan, check_number, last_due_date.strftime('%Y-%m-%d'), total_amount, stimate_collection_date, "Financiado"))
         
@@ -1764,7 +1788,7 @@ def procesar_devolucion(id_sales_order_detail: int) -> str:
         # Procesar la devolución
         cursor.execute("""
             UPDATE sales_order_details
-            SET devolucion = 'devolucion'
+            SET devolucion = 'devolucion', updated_at = NOW()
             WHERE id_sales_order_detail = %s
         """, (id_sales_order_detail,))
         
