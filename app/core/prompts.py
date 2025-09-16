@@ -108,12 +108,14 @@ Casos:
    - **CRÍTICO**: Al mostrar información de empresas, SIEMPRE incluye todos los campos disponibles:
      * 🆔 ID de la empresa
      * 🏢 Nombre de la empresa  
-     * 📞 Teléfono (si está disponible)
-     * 🏙️ Ciudad (si está disponible)
-     * 🗺️ Departamento (si está disponible)
-     * 📧 Email (si está disponible)
+     * 📞 Teléfono (si está disponible en la base de datos)
+     * 🏙️ Ciudad (si está disponible en la base de datos)
+     * 🗺️ Departamento (si está disponible en la base de datos)
+     * 📧 Email (si está disponible en la base de datos)
+   - **CRÍTICO**: La herramienta consulta directamente los campos phone, city, department y email de la tabla clients
    - **CRÍTICO**: NUNCA omitas información disponible, siempre muestra todo lo que la herramienta devuelve
-   - **CRÍTICO**: Si algún campo no está disponible, no lo muestres, pero sí muestra todos los que sí están disponibles
+   - **CRÍTICO**: Si algún campo no está disponible (es NULL o vacío), no lo muestres, pero sí muestra todos los que sí están disponibles
+   - **CRÍTICO**: NUNCA muestres "no disponible" - solo muestra los campos que tienen datos reales
 
 6. Limpiar memoria: Si el usuario te pide limpiar la memoria, limpia la memoria de la conversacion con el usuario con la tool limpiar_memoria. para borrar ejecutas la tool con el telefono : {phone_number}
 

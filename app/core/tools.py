@@ -197,7 +197,7 @@ def nombre_empresa(nombre: str = "", offset: int = 0, limit: int = 10) -> str:
         cursor = conn.cursor()
 
         query = """
-            SELECT DISTINCT
+            SELECT 
                 c.id_client AS id,
                 c.company AS nombre,
                 c.phone AS telefono,
@@ -207,7 +207,7 @@ def nombre_empresa(nombre: str = "", offset: int = 0, limit: int = 10) -> str:
             FROM public.clients c
             WHERE COALESCE(NULLIF(c.company, ''), '') <> ''
               AND c.company ILIKE %s
-            ORDER BY nombre
+            ORDER BY c.company
             OFFSET %s
             LIMIT %s
         """
@@ -221,19 +221,22 @@ def nombre_empresa(nombre: str = "", offset: int = 0, limit: int = 10) -> str:
         if not rows:
             return "No se encontraron empresas con los criterios especificados."
 
+        # Debug: mostrar qué datos se obtuvieron
+        print(f"🔍 Datos obtenidos de la consulta: {rows}")
+
         # Formatear información detallada para cada empresa
         lines = []
         for id_empresa, nombre_empresa, telefono, ciudad, departamento, email in rows:
             info_empresa = f"🆔 ID: {id_empresa} | 🏢 Empresa: {nombre_empresa}"
             
-            # Agregar información adicional si está disponible
-            if telefono:
+            # Agregar información adicional si está disponible (verificar que no sea None ni string vacío)
+            if telefono and str(telefono).strip():
                 info_empresa += f" | 📞 Teléfono: {telefono}"
-            if ciudad:
+            if ciudad and str(ciudad).strip():
                 info_empresa += f" | 🏙️ Ciudad: {ciudad}"
-            if departamento:
+            if departamento and str(departamento).strip():
                 info_empresa += f" | 🗺️ Departamento: {departamento}"
-            if email:
+            if email and str(email).strip():
                 info_empresa += f" | 📧 Email: {email}"
             
             lines.append(info_empresa)
