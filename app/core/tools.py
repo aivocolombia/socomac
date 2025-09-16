@@ -669,10 +669,10 @@ def registrar_pago(
 
         elif metodo_pago == "cheque":
             cursor.execute("""
-                INSERT INTO checks (id_payment, check_number, id_emission_bank, emission_date, stimate_collection_date, amount, created_at, updated_at)
+                INSERT INTO checks (id_payment, check_number, id_emission_bank_2, emission_date, stimate_collection_date, amount, created_at, updated_at)
                 VALUES (%s, %s, %s, %s, %s, %s, NOW(), NOW());
             """, (
-                id_payment, cheque_number, id_emission_bank, emission_date, stimate_collection_date, amount
+                id_payment, cheque_number, 1, emission_date, stimate_collection_date, amount
             ))
 
         # === Actualizar pay_amount en la cuota ===
@@ -887,10 +887,10 @@ def registrar_pago_directo_orden(
 
         elif metodo_pago == "cheque":
             cursor.execute("""
-                INSERT INTO checks (id_payment, check_number, id_emission_bank, emission_date, stimate_collection_date, amount, created_at, updated_at)
+                INSERT INTO checks (id_payment, check_number, id_emission_bank_2, emission_date, stimate_collection_date, amount, created_at, updated_at)
                 VALUES (%s, %s, %s, %s, %s, %s, NOW(), NOW());
             """, (
-                id_payment, cheque_number, id_emission_bank, emission_date, stimate_collection_date, amount
+                id_payment, cheque_number, 1, emission_date, stimate_collection_date, amount
             ))
 
         conn.commit()
