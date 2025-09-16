@@ -890,7 +890,7 @@ def registrar_pago_directo_orden(
                 INSERT INTO checks (id_payment, check_number, id_emission_bank_2, emission_date, stimate_collection_date, amount, created_at, updated_at)
                 VALUES (%s, %s, %s, %s, %s, %s, NOW(), NOW());
             """, (
-                id_payment, cheque_number, 1, emission_date, stimate_collection_date, amount
+                id_payment, cheque_number, 1, emision_date, stimate_collection_date, amount
             ))
 
         conn.commit()
