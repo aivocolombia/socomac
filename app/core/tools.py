@@ -172,6 +172,7 @@ def nombre_cliente(nombre: str = "", offset: int = 0, limit: int = 10) -> str:
 def nombre_empresa(nombre: str = "", offset: int = 0, limit: int = 10) -> str:
     """
     Devuelve empresas (clients.company) filtradas por nombre con paginación.
+    Incluye información adicional como teléfono, ciudad, departamento y email.
 
     Args:
         nombre (str): Parte del nombre de la empresa a buscar. Vacío = todas.
@@ -179,7 +180,7 @@ def nombre_empresa(nombre: str = "", offset: int = 0, limit: int = 10) -> str:
         limit (int): Cantidad de registros a devolver.
 
     Returns:
-        str: Lista de empresas con ID y nombre.
+        str: Lista de empresas con información completa (ID, nombre, teléfono, ciudad, departamento, email).
     """
     try:
         print(f"🏢 Buscando empresas con nombre: '{nombre}'")
@@ -198,7 +199,11 @@ def nombre_empresa(nombre: str = "", offset: int = 0, limit: int = 10) -> str:
         query = """
             SELECT DISTINCT
                 c.id_client AS id,
-                c.company   AS nombre
+                c.company AS nombre,
+                c.phone AS telefono,
+                c.city AS ciudad,
+                c.department AS departamento,
+                c.email AS email
             FROM public.clients c
             WHERE COALESCE(NULLIF(c.company, ''), '') <> ''
               AND c.company ILIKE %s
@@ -216,7 +221,23 @@ def nombre_empresa(nombre: str = "", offset: int = 0, limit: int = 10) -> str:
         if not rows:
             return "No se encontraron empresas con los criterios especificados."
 
-        lines = [f"🆔 ID: {rid} | 🏢 Empresa: {rnom}" for rid, rnom in rows]
+        # Formatear información detallada para cada empresa
+        lines = []
+        for id_empresa, nombre_empresa, telefono, ciudad, departamento, email in rows:
+            info_empresa = f"🆔 ID: {id_empresa} | 🏢 Empresa: {nombre_empresa}"
+            
+            # Agregar información adicional si está disponible
+            if telefono:
+                info_empresa += f" | 📞 Teléfono: {telefono}"
+            if ciudad:
+                info_empresa += f" | 🏙️ Ciudad: {ciudad}"
+            if departamento:
+                info_empresa += f" | 🗺️ Departamento: {departamento}"
+            if email:
+                info_empresa += f" | 📧 Email: {email}"
+            
+            lines.append(info_empresa)
+        
         print(f"✅ Encontradas {len(rows)} empresas")
         return "\n".join(lines)
         
