@@ -857,6 +857,10 @@ def registrar_pago_directo_orden(
             if cheque_value is None:
                 return "❌ Debes indicar el valor del cheque."
             amount = cheque_value
+            
+            # Para cheques, el banco de emisión puede ser cualquiera
+            # No se valida contra la tabla banks ya que puede ser cualquier banco
+            id_emission_bank = None
 
         # === Determinar valor de caja_receipt ===
         caja_receipt = 'Yes' if metodo_pago == "efectivo" else None
