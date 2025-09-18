@@ -112,7 +112,7 @@ def nombre_cliente(nombre: str = "", offset: int = 0, limit: int = 10) -> str:
             respuesta = []
             for id_cliente, nombre_cliente, empresa, documento, direccion, ciudad, departamento, telefono in resultados:
                 # Formatear información de manera clara
-                info_cliente = f"🆔 ID: {id_cliente} | 👤 Nombre: {nombre_cliente}"
+                info_cliente = f"ID: {id_cliente} | Nombre: {nombre_cliente}"
                 
                 # Agregar información adicional si está disponible
                 if empresa:
@@ -142,7 +142,7 @@ def nombre_cliente(nombre: str = "", offset: int = 0, limit: int = 10) -> str:
             respuesta = []
             for id_cliente, nombre_cliente, empresa, documento, direccion, ciudad, departamento, telefono in resultados:
                 # Formatear información básica
-                info_cliente = f"🆔 ID: {id_cliente} | 👤 Nombre: {nombre_cliente}"
+                info_cliente = f"ID: {id_cliente} | Nombre: {nombre_cliente}"
                 
                 # Agregar información adicional si está disponible
                 if empresa:
@@ -227,7 +227,7 @@ def nombre_empresa(nombre: str = "", offset: int = 0, limit: int = 10) -> str:
         # Formatear información detallada para cada empresa
         lines = []
         for id_empresa, nombre_empresa, telefono, ciudad, departamento, email in rows:
-            info_empresa = f"🆔 ID: {id_empresa} | 🏢 Empresa: {nombre_empresa}"
+            info_empresa = f"ID: {id_empresa} | Empresa: {nombre_empresa}"
             
             # Agregar información adicional si está disponible (verificar que no sea None ni string vacío)
             if telefono and str(telefono).strip():
@@ -414,8 +414,8 @@ def cuotas_pendientes_por_plan(id_payment_plan: int) -> str:
                 "id_payment_plan": id_plan
             }
             lines.append(
-                f"Nro: {num_installment} | 🆔 ID real (id_payment_installment): {id_real} "
-                f"| 🪙 ID plan: {id_plan} | 💰 Monto total: {amount} | "
+                f"Nro: {num_installment} | ID real (id_payment_installment): {id_real} "
+                f"| ID plan: {id_plan} | Monto total: {amount} | "
                 f"💵 Pagado: {pay_amount} | 📅 Vence: {due_date}"
             )
 
@@ -478,7 +478,7 @@ def consultar_productos(nombre: str = "", offset: int = 0, limit: int = 10) -> s
         respuesta = []
         for id_producto, nombre_producto, descripcion, id_categoria, nombre_categoria in resultados:
             categoria = nombre_categoria if nombre_categoria else "Sin categoría"
-            respuesta.append(f"🆔 ID: {id_producto} | 📦 Producto: {nombre_producto} | 📝 Descripción: {descripcion} | 🏷️ Categoría: {categoria}")
+            respuesta.append(f"ID: {id_producto} | Producto: {nombre_producto} | Descripción: {descripcion} | Categoría: {categoria}")
 
         print(f"✅ Encontrados {len(resultados)} productos")
         return "\n".join(respuesta)
@@ -785,7 +785,7 @@ def crear_orden_venta(
         conn.commit()
         conn.close()
 
-        return f"✅ Orden de venta creada exitosamente.\n🆔 ID de la orden: {id_sales_orders}"
+        return f"Orden de venta creada exitosamente.\nID de la orden: {id_sales_orders}"
 
     except Exception as e:
         error_msg = f"❌ Error al crear la orden de venta: {str(e)}"
@@ -988,7 +988,7 @@ def agregar_detalle_orden_venta(
         conn.commit()
         conn.close()
 
-        return f"✅ Detalle agregado exitosamente a la orden {id_sales_orders}.\n📦 Producto: {producto[0]}\n📊 Cantidad: {quantity}\n💰 Precio unitario: {unit_price}\n💵 Subtotal: {subtotal}\n🆔 ID del detalle: {id_sales_order_detail}"
+        return f"Detalle agregado exitosamente a la orden {id_sales_orders}.\nProducto: {producto[0]}\nCantidad: {quantity}\nPrecio unitario: {unit_price}\nSubtotal: {subtotal}\nID del detalle: {id_sales_order_detail}"
 
     except Exception as e:
         error_msg = f"❌ Error al agregar el detalle a la orden: {str(e)}"
@@ -1045,7 +1045,7 @@ def buscar_producto_por_nombre(nombre_producto: str) -> str:
             categoria = nombre_categoria if nombre_categoria else "Sin categoría"
             return (
                 f"✅ Producto encontrado:\n"
-                f"🆔 ID: {id_producto}\n"
+                f"ID: {id_producto}\n"
                 f"📦 Nombre: {nombre_producto}\n"
                 f"📝 Descripción: {descripcion}\n"
                 f"🏷️ Categoría: {categoria}"
@@ -1056,7 +1056,7 @@ def buscar_producto_por_nombre(nombre_producto: str) -> str:
             for id_producto, nombre_producto, descripcion, id_categoria, nombre_categoria in resultados:
                 categoria = nombre_categoria if nombre_categoria else "Sin categoría"
                 respuesta.append(
-                    f"🆔 ID: {id_producto} | 📦 {nombre_producto} | 📝 {descripcion} | 🏷️ {categoria}"
+                    f"ID: {id_producto} | {nombre_producto} | {descripcion} | {categoria}"
                 )
             respuesta.append("\n💡 Por favor, especifica el nombre exacto del producto que deseas usar.")
             return "\n".join(respuesta)
@@ -1185,7 +1185,7 @@ def crear_plan_financiamiento(
         
         return (
             f"✅ Plan de financiamiento creado exitosamente.\n"
-            f"🆔 ID del plan: {id_payment_plan}\n"
+            f"ID del plan: {id_payment_plan}\n"
             f"🛒 Orden de venta: {id_sales_orders}\n"
             f"📊 Número de cuotas: {num_installments}\n"
             f"💰 Monto total: {total_amount}\n"
@@ -1314,7 +1314,7 @@ def crear_nuevo_cliente(
         
         # Construir mensaje de confirmación
         confirmacion = f"✅ Cliente creado exitosamente.\n"
-        confirmacion += f"🆔 ID del cliente: {id_client}\n"
+        confirmacion += f"ID del cliente: {id_client}\n"
         confirmacion += f"👤 Nombre: {full_name}\n"
         confirmacion += f"📄 Documento: {unique_id}\n"
         confirmacion += f"🏷️ Tipo: {client_type}\n"
@@ -1480,7 +1480,7 @@ def crear_plan_letras(
         
         return (
             f"✅ Plan de letras creado exitosamente.\n"
-            f"🆔 ID del plan: {id_payment_plan}\n"
+            f"ID del plan: {id_payment_plan}\n"
             f"🛒 Orden de venta: {id_sales_orders}\n"
             f"📊 Número de cuotas: {num_installments}\n"
             f"💰 Monto total: {total_amount}\n"
@@ -1643,7 +1643,7 @@ def crear_plan_cheque(
         
         return (
             f"✅ Plan de cheque creado exitosamente.\n"
-            f"🆔 ID del plan: {id_payment_plan}\n"
+            f"ID del plan: {id_payment_plan}\n"
             f"🛒 Orden de venta: {id_sales_orders}\n"
             f"📊 Número de cuotas: {num_installments}\n"
             f"💰 Monto total: {total_amount}\n"
@@ -1811,7 +1811,7 @@ def procesar_devolucion(id_sales_order_detail: int) -> str:
         id_detail, id_order, id_product, quantity, unit_price, subtotal, product_name, client_name, id_client = detalle
         
         confirmacion = f"✅ Devolución procesada exitosamente.\n"
-        confirmacion += f"🆔 ID del detalle: {id_detail}\n"
+        confirmacion += f"ID del detalle: {id_detail}\n"
         confirmacion += f"🛒 Orden de venta: {id_order}\n"
         confirmacion += f"👤 Cliente: {client_name} (ID: {id_client})\n"
         confirmacion += f"📦 Producto: {product_name} (ID: {id_product})\n"
@@ -2395,7 +2395,7 @@ def crear_usuario_agent(nombre: str, telefono: str, tipo: str = "Secundario") ->
             name_verificado, phone_verificado, type_verificado, status_verificado = usuario_verificado
             status_texto = "ACTIVO" if status_verificado == "TRUE" else "INACTIVO"
             
-            mensaje = f"✅ Usuario creado exitosamente\n🆔 ID: {nuevo_user_id}\n👤 Nombre: {name_verificado}\n📱 Teléfono: {phone_verificado}\n🔧 Tipo: {type_verificado}\n✅ Status: {status_verificado} ({status_texto})"
+            mensaje = f"Usuario creado exitosamente\nID: {nuevo_user_id}\nNombre: {name_verificado}\nTeléfono: {phone_verificado}\nTipo: {type_verificado}\nStatus: {status_verificado} ({status_texto})"
             
             return mensaje
         else:

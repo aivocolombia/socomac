@@ -370,7 +370,7 @@ Casos:
 Al mostrar las cuotas, debes incluir siempre el id_payment_installment real de la tabla payment_installment.
 
 formato:
-Nro: <installment_number> | 🆔 ID real (id_payment_installment): <id_real> | 🪙 ID plan: <id_payment_plan> |
+Nro: <installment_number> | ID real (id_payment_installment): <id_real> | ID plan: <id_payment_plan> |
 💰 Monto total: <monto_total> | 💵 Pagado: <monto_pagado> | 📅 Vence: <fecha_vencimiento> | Estado: <estado>
  
  IMPORTANTE: Mostrar TODAS las cuotas del plan, no solo las pendientes. Indicar claramente el estado de cada una.
@@ -436,7 +436,7 @@ Insertar en payments y cheques, y actualizar pay_amount de la cuota.
     8. Mensaje final
 Si éxito → Mostrar:
 ✅ Pago registrado correctamente.
-🆔 ID Payment: <ID generado>
+ID Payment: <ID generado>
 💰 Monto: <monto>
 💳 Método: <método>
 🛒 Orden: <id_sales_orders>
@@ -714,7 +714,7 @@ DATOS:
 - **CRÍTICO ABSOLUTO**: El procesamiento de fechas es AUTOMÁTICO y OBLIGATORIO"""
 formato:
 
-Nro: <installment_number> | 🆔 ID real (id_payment_installment): <id_real> | 🪙 ID plan: <id_payment_plan> |
+Nro: <installment_number> | ID real (id_payment_installment): <id_real> | ID plan: <id_payment_plan> |
 
 💰 Monto total: <monto_total> | 💵 Pagado: <monto_pagado> | 📅 Vence: <fecha_vencimiento> | Estado: <estado>
 
@@ -846,7 +846,7 @@ Si éxito → Mostrar:
 
 ✅ Pago registrado correctamente.
 
-🆔 ID Payment: <ID generado>
+ID Payment: <ID generado>
 
 💰 Monto: <monto>
 
