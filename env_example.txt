@@ -1,0 +1,14 @@
+# Variables de entorno para WhatsApp Integration
+
+# Configuración de Whapi
+WHAPI_TOKEN=tu_token_de_whapi_aqui
+WHAPI_BASE_URL=https://gate.whapi.cloud
+
+# Configuración del Frontend (para CORS)
+FRONTEND_URL=https://tu-app-vercel.vercel.app
+
+# Configuración de logging
+LOG_LEVEL=INFO
+
+# Variables existentes de tu proyecto
+# (mantén las que ya tienes configuradas)
