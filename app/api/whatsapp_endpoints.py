@@ -321,8 +321,20 @@ async def enviar_pdf_whatsapp(
         
         logger.info(f"Tamaño real del PDF: {size_mb:.2f}MB")
         
+        # Validaciones adicionales
+        if size_mb > 10:
+            raise HTTPException(status_code=400, detail=f"PDF demasiado grande: {size_mb:.2f}MB. Máximo permitido: 10MB")
+        
+        # Validar que sea un PDF válido
+        if not pdf_bytes.startswith(b'%PDF-'):
+            raise HTTPException(status_code=400, detail="El archivo no es un PDF válido")
+        
         # Crear mensaje personalizado basado en metadata
         mensaje_personalizado = crear_mensaje_pdf(request.metadata, request.nombre_archivo)
+        
+        logger.info(f"Enviando PDF a WHAPI...")
+        logger.info(f"URL: {whatsapp_service.base_url}/messages")
+        logger.info(f"Token configurado: {'Sí' if whatsapp_service.whapi_token else 'No'}")
         
         # Enviar PDF usando el servicio WhatsApp
         resultado = whatsapp_service.enviar_documento_base64(

@@ -84,7 +84,8 @@ class WhatsAppService:
         """
         logger.info(f"Enviando documento a {numero_telefono}: {documento_url}")
         
-        url = f"{self.base_url}/messages/documents"
+        # ✅ URL CORREGIDA - Sin doble slash
+        url = f"{self.base_url}/messages"
         
         headers = {
             "Authorization": f"Bearer {self.whapi_token}",
@@ -139,7 +140,8 @@ class WhatsAppService:
         """
         logger.info(f"Enviando documento base64 a {numero_telefono}: {nombre_archivo}")
         
-        url = f"{self.base_url}/messages/documents"
+        # ✅ URL CORREGIDA - Sin doble slash
+        url = f"{self.base_url}/messages"
         
         headers = {
             "Authorization": f"Bearer {self.whapi_token}",
@@ -158,7 +160,14 @@ class WhatsAppService:
         }
         
         try:
+            logger.info(f"Enviando a WHAPI: {url}")
+            logger.info(f"Payload: {payload}")
+            
             response = requests.post(url, headers=headers, json=payload, timeout=30)
+            
+            logger.info(f"Response status: {response.status_code}")
+            logger.info(f"Response content: {response.text}")
+            
             response.raise_for_status()
             
             result = response.json()
@@ -173,6 +182,8 @@ class WhatsAppService:
             
         except requests.exceptions.RequestException as e:
             logger.error(f"Error al enviar documento base64: {str(e)}")
+            logger.error(f"Response status: {getattr(e.response, 'status_code', 'N/A')}")
+            logger.error(f"Response text: {getattr(e.response, 'text', 'N/A')}")
             return {"error": f"Error al enviar documento: {str(e)}", "status": "failed"}
             
         except Exception as e:
