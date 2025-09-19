@@ -688,6 +688,126 @@ async def options_enviar_pdf():
     """
     return {"message": "CORS preflight handled"}
 
+@router.get("/documentos-supabase")
+async def listar_documentos_supabase():
+    """
+    Endpoint para listar documentos en Supabase Storage
+    """
+    try:
+        logger.info("📁 Listando documentos en Supabase Storage...")
+        
+        from app.services.supabase_storage import SupabaseStorageService
+        supabase_service = SupabaseStorageService()
+        
+        # Listar archivos
+        resultado = supabase_service.listar_archivos(limite=50)
+        
+        if resultado.get("status") == "success":
+            archivos = resultado.get("archivos", [])
+            logger.info(f"✅ Encontrados {len(archivos)} archivos")
+            
+            return {
+                "status": "success",
+                "message": f"Documentos encontrados: {len(archivos)}",
+                "total": len(archivos),
+                "archivos": archivos,
+                "bucket": supabase_service.bucket_name,
+                "url_base": f"{supabase_service.supabase_url}/storage/v1/object/public/{supabase_service.bucket_name}"
+            }
+        else:
+            logger.error(f"❌ Error listando archivos: {resultado.get('error')}")
+            return {
+                "status": "error",
+                "message": "Error listando documentos",
+                "error": resultado.get("error")
+            }
+            
+    except Exception as e:
+        logger.error(f"❌ Error inesperado: {str(e)}")
+        return {
+            "status": "error",
+            "message": "Error interno del servidor",
+            "error": str(e)
+        }
+
+@router.get("/documento-supabase/{nombre_archivo}")
+async def obtener_documento_supabase(nombre_archivo: str):
+    """
+    Endpoint para obtener información de un documento específico
+    """
+    try:
+        logger.info(f"📄 Obteniendo información del documento: {nombre_archivo}")
+        
+        from app.services.supabase_storage import SupabaseStorageService
+        supabase_service = SupabaseStorageService()
+        
+        # Obtener URL pública
+        url_publica = supabase_service.obtener_url_publica(nombre_archivo)
+        
+        if url_publica:
+            logger.info(f"✅ URL pública obtenida: {url_publica}")
+            
+            return {
+                "status": "success",
+                "message": "Documento encontrado",
+                "nombre_archivo": nombre_archivo,
+                "url_publica": url_publica,
+                "bucket": supabase_service.bucket_name,
+                "accesible": True
+            }
+        else:
+            logger.error(f"❌ No se pudo obtener URL para: {nombre_archivo}")
+            return {
+                "status": "error",
+                "message": "Documento no encontrado",
+                "nombre_archivo": nombre_archivo,
+                "accesible": False
+            }
+            
+    except Exception as e:
+        logger.error(f"❌ Error obteniendo documento: {str(e)}")
+        return {
+            "status": "error",
+            "message": "Error interno del servidor",
+            "error": str(e)
+        }
+
+@router.get("/test-supabase")
+async def test_supabase_conexion():
+    """
+    Endpoint para probar la conexión con Supabase Storage
+    """
+    try:
+        logger.info("🧪 Probando conexión con Supabase Storage...")
+        
+        from app.services.supabase_storage import SupabaseStorageService
+        supabase_service = SupabaseStorageService()
+        
+        # Verificar bucket
+        bucket_accesible = supabase_service.verificar_bucket_existe()
+        
+        # Listar archivos
+        resultado_archivos = supabase_service.listar_archivos(limite=5)
+        
+        return {
+            "status": "success",
+            "message": "Prueba de conexión con Supabase",
+            "supabase_url": supabase_service.supabase_url,
+            "bucket_name": supabase_service.bucket_name,
+            "bucket_accesible": bucket_accesible,
+            "archivos_encontrados": resultado_archivos.get("total", 0),
+            "archivos": resultado_archivos.get("archivos", []),
+            "url_base": f"{supabase_service.supabase_url}/storage/v1/object/public/{supabase_service.bucket_name}"
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Error probando Supabase: {str(e)}")
+        return {
+            "status": "error",
+            "message": "Error probando conexión con Supabase",
+            "error": str(e)
+        }
+
 @router.get("/debug-config")
 async def debug_config():
     """
