@@ -30,29 +30,20 @@ class SupabaseStorageService:
             raise ValueError("SUPABASE_URL y SUPABASE_KEY deben estar configurados")
         
         self.supabase: Client = create_client(self.supabase_url, self.supabase_key)
-        self.bucket_name = "documentos-whatsapp"
+        self.bucket_name = "receipt"  # Usar el bucket existente
     
-    def crear_bucket_si_no_existe(self) -> bool:
+    def verificar_bucket_existe(self) -> bool:
         """
-        Crear bucket si no existe
+        Verificar si el bucket existe y está disponible
         """
         try:
             # Intentar obtener el bucket
             self.supabase.storage.get_bucket(self.bucket_name)
-            logger.info(f"✅ Bucket '{self.bucket_name}' ya existe")
+            logger.info(f"✅ Bucket '{self.bucket_name}' existe y está disponible")
             return True
-        except Exception:
-            try:
-                # Crear bucket si no existe
-                self.supabase.storage.create_bucket(
-                    self.bucket_name,
-                    options={"public": True}
-                )
-                logger.info(f"✅ Bucket '{self.bucket_name}' creado exitosamente")
-                return True
-            except Exception as e:
-                logger.error(f"❌ Error creando bucket: {e}")
-                return False
+        except Exception as e:
+            logger.error(f"❌ Error accediendo al bucket '{self.bucket_name}': {e}")
+            return False
     
     def subir_pdf(self, pdf_base64: str, nombre_archivo: str, metadata: Dict[str, Any] = None) -> Dict[str, Any]:
         """
@@ -69,9 +60,9 @@ class SupabaseStorageService:
         try:
             logger.info(f"📤 Subiendo PDF a Supabase: {nombre_archivo}")
             
-            # Crear bucket si no existe
-            if not self.crear_bucket_si_no_existe():
-                return {"error": "No se pudo crear el bucket", "status": "failed"}
+            # Verificar que el bucket existe
+            if not self.verificar_bucket_existe():
+                return {"error": "No se pudo acceder al bucket", "status": "failed"}
             
             # Generar nombre único
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
