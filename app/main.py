@@ -11,15 +11,18 @@ app = FastAPI(
 )
 
 # Configurar CORS para permitir conexiones desde Vercel
+# TEMPORAL: Configuración más permisiva para debugging
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "*",  # TEMPORAL: Permitir todos los orígenes para debugging
         "http://localhost:3000",  # Desarrollo local
-        "https://tu-app-vercel.vercel.app",  # Reemplaza con tu dominio de Vercel
+        "https://socomac-truck-pos-x3av-4p23q78xl-davids-projects-dc42c934.vercel.app",  # Tu dominio real de Vercel
         "https://*.vercel.app",  # Cualquier subdominio de Vercel
-        os.getenv("FRONTEND_URL", "https://tu-app-vercel.vercel.app")  # Variable de entorno
+        "https://socomac-truck-pos.vercel.app",  # Dominio alternativo
+        os.getenv("FRONTEND_URL", "https://socomac-truck-pos-x3av-4p23q78xl-davids-projects-dc42c934.vercel.app")  # Variable de entorno
     ],
-    allow_credentials=True,
+    allow_credentials=False,  # TEMPORAL: Deshabilitar credentials para debugging
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )

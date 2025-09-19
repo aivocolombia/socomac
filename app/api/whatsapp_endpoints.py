@@ -233,3 +233,17 @@ async def verificar_estado_whatsapp(
     except Exception as e:
         logger.error(f"Error verificando estado: {str(e)}")
         raise HTTPException(status_code=500, detail="Error verificando estado de WhatsApp")
+
+@router.options("/enviar-mensaje")
+async def options_enviar_mensaje():
+    """
+    Endpoint OPTIONS para manejar preflight CORS
+    """
+    return {"message": "CORS preflight handled"}
+
+@router.options("/recibo-listo")
+async def options_recibo_listo():
+    """
+    Endpoint OPTIONS para manejar preflight CORS
+    """
+    return {"message": "CORS preflight handled"}
