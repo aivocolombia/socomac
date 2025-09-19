@@ -148,6 +148,206 @@ def get_whatsapp_service_alternative():
     except ValueError as e:
         raise HTTPException(status_code=500, detail=f"Error de configuración: {str(e)}")
 
+# 🔧 FUNCIONES DE DEBUGGING Y VALIDACIÓN
+
+def formatear_telefono_colombia(telefono: str) -> str:
+    """
+    Formatear teléfono colombiano automáticamente
+    """
+    # Remover espacios, guiones, paréntesis
+    telefono_limpio = re.sub(r'[\s\-\(\)]', '', telefono)
+    
+    logger.info(f"📱 Teléfono original: {telefono}")
+    logger.info(f"📱 Teléfono limpio: {telefono_limpio}")
+    
+    # Si empieza con 57, agregar +
+    if telefono_limpio.startswith('57') and len(telefono_limpio) == 12:
+        resultado = f"+{telefono_limpio}"
+        logger.info(f"📱 Formato 57XXXXXXXXXX: {resultado}")
+        return resultado
+    
+    # Si empieza con +57, mantener
+    if telefono_limpio.startswith('+57') and len(telefono_limpio) == 13:
+        resultado = telefono_limpio
+        logger.info(f"📱 Formato +57XXXXXXXXXX: {resultado}")
+        return resultado
+    
+    # Si empieza con 3, agregar +57
+    if telefono_limpio.startswith('3') and len(telefono_limpio) == 10:
+        resultado = f"+57{telefono_limpio}"
+        logger.info(f"📱 Formato 3XXXXXXXXX: {resultado}")
+        return resultado
+    
+    # Si es de 10 dígitos, agregar +57
+    if len(telefono_limpio) == 10 and telefono_limpio.isdigit():
+        resultado = f"+57{telefono_limpio}"
+        logger.info(f"📱 Formato XXXXXXXXXX: {resultado}")
+        return resultado
+    
+    error_msg = f"Formato de teléfono inválido: {telefono} (limpio: {telefono_limpio})"
+    logger.error(f"❌ {error_msg}")
+    raise ValueError(error_msg)
+
+def validar_pdf_robusto(pdf_base64: str) -> Dict[str, Any]:
+    """
+    Validar PDF de manera robusta
+    """
+    try:
+        logger.info(f"🔍 Validando PDF: {len(pdf_base64)} caracteres base64")
+        
+        # Decodificar base64
+        pdf_bytes = base64.b64decode(pdf_base64)
+        logger.info(f"📄 PDF decodificado: {len(pdf_bytes)} bytes")
+        
+        # Validar header PDF
+        header = pdf_bytes[:10]
+        logger.info(f"📄 Header PDF: {header}")
+        
+        if not pdf_bytes.startswith(b'%PDF-'):
+            return {
+                "valido": False,
+                "error": "No es un PDF válido (header incorrecto)",
+                "header": header.decode('utf-8', errors='ignore'),
+                "tamaño_bytes": len(pdf_bytes)
+            }
+        
+        # Validar tamaño
+        size_mb = len(pdf_bytes) / (1024 * 1024)
+        logger.info(f"📏 Tamaño PDF: {size_mb:.2f}MB")
+        
+        if size_mb > 10:
+            return {
+                "valido": False,
+                "error": f"PDF demasiado grande: {size_mb:.2f}MB",
+                "tamaño_mb": size_mb,
+                "tamaño_bytes": len(pdf_bytes)
+            }
+        
+        # Validar que tenga contenido mínimo
+        if len(pdf_bytes) < 100:
+            return {
+                "valido": False,
+                "error": "PDF demasiado pequeño",
+                "tamaño_bytes": len(pdf_bytes)
+            }
+        
+        logger.info(f"✅ PDF válido: {size_mb:.2f}MB")
+        
+        return {
+            "valido": True,
+            "tamaño_mb": round(size_mb, 2),
+            "tamaño_bytes": len(pdf_bytes),
+            "header": header.decode('utf-8', errors='ignore')
+        }
+        
+    except Exception as e:
+        error_msg = f"Error validando PDF: {str(e)}"
+        logger.error(f"❌ {error_msg}")
+        return {
+            "valido": False,
+            "error": error_msg
+        }
+
+def log_solicitud_pdf(request: PDFRequest):
+    """
+    Logging detallado de la solicitud
+    """
+    logger.info("=" * 80)
+    logger.info("📄 NUEVA SOLICITUD DE ENVÍO DE PDF")
+    logger.info("=" * 80)
+    logger.info(f"📱 Teléfono original: {request.numero_telefono}")
+    logger.info(f"📄 Archivo: {request.nombre_archivo}")
+    logger.info(f"📊 Tamaño base64: {len(request.pdf_base64)} caracteres")
+    logger.info(f"📋 Metadata: {request.metadata}")
+    
+    # Validar PDF
+    validacion = validar_pdf_robusto(request.pdf_base64)
+    if validacion["valido"]:
+        logger.info(f"✅ PDF válido: {validacion['tamaño_mb']}MB")
+    else:
+        logger.error(f"❌ PDF inválido: {validacion['error']}")
+    
+    # Formatear teléfono
+    try:
+        telefono_formateado = formatear_telefono_colombia(request.numero_telefono)
+        logger.info(f"📱 Teléfono formateado: {telefono_formateado}")
+    except Exception as e:
+        logger.error(f"❌ Error formateando teléfono: {e}")
+
+def crear_pdf_prueba() -> bytes:
+    """
+    Crear un PDF de prueba mínimo
+    """
+    pdf_content = """%PDF-1.4
+1 0 obj
+<<
+/Type /Catalog
+/Pages 2 0 R
+>>
+endobj
+
+2 0 obj
+<<
+/Type /Pages
+/Kids [3 0 R]
+/Count 1
+>>
+endobj
+
+3 0 obj
+<<
+/Type /Page
+/Parent 2 0 R
+/MediaBox [0 0 612 792]
+/Contents 4 0 R
+/Resources <<
+/Font <<
+/F1 5 0 R
+>>
+>>
+>>
+endobj
+
+4 0 obj
+<<
+/Length 44
+>>
+stream
+BT
+/F1 12 Tf
+72 720 Td
+(Test PDF) Tj
+ET
+endstream
+endobj
+
+5 0 obj
+<<
+/Type /Font
+/Subtype /Type1
+/BaseFont /Helvetica
+>>
+endobj
+
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000274 00000 n 
+0000000368 00000 n 
+trailer
+<<
+/Size 6
+/Root 1 0 R
+>>
+startxref
+465
+%%EOF"""
+    
+    return pdf_content.encode('utf-8')
+
 @router.post("/enviar-mensaje")
 async def enviar_mensaje_whatsapp(
     request: MensajeRequest,
@@ -316,75 +516,69 @@ async def enviar_pdf_whatsapp(
     whatsapp_service: WhatsAppService = Depends(get_whatsapp_service)
 ):
     """
-    Endpoint para enviar PDF por WhatsApp usando WHAPI
+    Endpoint mejorado para enviar PDF con debugging completo
     
     Endpoint: POST /whatsapp/enviar-pdf
     URL WHAPI: https://gate.whapi.cloud/messages/document
     """
     try:
-        # 🔍 LOGGING DETALLADO - Inicio de la solicitud
-        logger.info("=" * 60)
-        logger.info("📄 NUEVA SOLICITUD DE ENVÍO DE PDF")
-        logger.info("=" * 60)
-        logger.info(f"📱 Teléfono destino: {request.numero_telefono}")
-        logger.info(f"📄 Archivo: {request.nombre_archivo}")
-        logger.info(f"📊 Tamaño base64: {len(request.pdf_base64)} caracteres")
-        logger.info(f"📋 Metadata: {request.metadata}")
+        # 🔍 LOGGING DETALLADO
+        log_solicitud_pdf(request)
         
-        # Decodificar PDF para obtener información adicional
-        pdf_bytes = base64.b64decode(request.pdf_base64)
-        size_mb = len(pdf_bytes) / (1024 * 1024)
-        
-        logger.info(f"📏 Tamaño real del PDF: {size_mb:.2f}MB")
-        
-        # ✅ VALIDACIONES ADICIONALES
-        if size_mb > 10:
-            error_msg = f"PDF demasiado grande: {size_mb:.2f}MB. Máximo permitido: 10MB"
+        # ✅ FORMATEAR TELÉFONO
+        try:
+            telefono_formateado = formatear_telefono_colombia(request.numero_telefono)
+            logger.info(f"📱 Teléfono formateado: {telefono_formateado}")
+        except Exception as e:
+            error_msg = f"Error formateando teléfono: {str(e)}"
             logger.error(f"❌ {error_msg}")
             raise HTTPException(status_code=400, detail=error_msg)
         
-        # Validar que sea un PDF válido
-        if not pdf_bytes.startswith(b'%PDF-'):
-            error_msg = "El archivo no es un PDF válido"
+        # ✅ VALIDAR PDF
+        validacion = validar_pdf_robusto(request.pdf_base64)
+        if not validacion["valido"]:
+            error_msg = f"PDF inválido: {validacion['error']}"
             logger.error(f"❌ {error_msg}")
             raise HTTPException(status_code=400, detail=error_msg)
         
-        # Crear mensaje personalizado basado en metadata
+        logger.info(f"✅ PDF válido: {validacion['tamaño_mb']}MB")
+        
+        # ✅ CREAR MENSAJE PERSONALIZADO
         mensaje_personalizado = crear_mensaje_pdf(request.metadata, request.nombre_archivo)
-        logger.info(f"💬 Mensaje personalizado: {mensaje_personalizado}")
+        logger.info(f"💬 Mensaje: {mensaje_personalizado}")
         
         # 🔧 CONFIGURACIÓN WHAPI
         whapi_url = f"{whatsapp_service.base_url.rstrip('/')}/messages/document"
         logger.info(f"🌐 URL WHAPI: {whapi_url}")
         logger.info(f"🔑 Token configurado: {'Sí' if whatsapp_service.whapi_token else 'No'}")
         
-        # 📤 ENVÍO A WHAPI
-        logger.info("🚀 Enviando PDF a WHAPI...")
+        # ✅ ENVIAR A WHAPI
+        logger.info("🚀 Enviando a WHAPI...")
         resultado = whatsapp_service.enviar_documento_base64(
-            request.numero_telefono,
+            telefono_formateado,  # Usar teléfono formateado
             request.pdf_base64,
             request.nombre_archivo,
             mensaje_personalizado
         )
         
-        # 📊 RESPUESTA DE WHAPI
+        # 📊 RESPUESTA
         logger.info(f"📨 Respuesta WHAPI: {resultado}")
         
         if "error" in resultado:
-            error_msg = f"Error al enviar PDF: {resultado['error']}"
+            error_msg = f"Error WHAPI: {resultado['error']}"
             logger.error(f"❌ {error_msg}")
-            raise HTTPException(status_code=400, detail=resultado["error"])
+            raise HTTPException(status_code=400, detail=error_msg)
         
         # ✅ ÉXITO
-        logger.info(f"✅ PDF enviado exitosamente a {request.numero_telefono}")
-        logger.info("=" * 60)
+        logger.info(f"✅ PDF enviado exitosamente a {telefono_formateado}")
+        logger.info("=" * 80)
         
         return {
             "success": True,
             "message": "PDF enviado exitosamente",
-            "numero_telefono": request.numero_telefono,
+            "numero_telefono": telefono_formateado,
             "archivo": request.nombre_archivo,
-            "tamaño_mb": round(size_mb, 2),
+            "tamaño_mb": validacion["tamaño_mb"],
             "metadata": request.metadata,
             "whapi_response": resultado
         }
@@ -392,9 +586,9 @@ async def enviar_pdf_whatsapp(
     except HTTPException:
         raise
     except Exception as e:
-        error_msg = f"Error inesperado enviando PDF: {str(e)}"
+        error_msg = f"Error inesperado: {str(e)}"
         logger.error(f"💥 {error_msg}")
-        logger.error("=" * 60)
+        logger.error("=" * 80)
         raise HTTPException(status_code=500, detail="Error interno del servidor")
 
 @router.options("/enviar-pdf")
@@ -436,6 +630,102 @@ async def debug_config():
         return {
             "status": "error",
             "message": f"Error obteniendo configuración: {str(e)}"
+        }
+
+@router.post("/test-pdf")
+async def test_pdf_endpoint():
+    """
+    Endpoint para probar la funcionalidad de PDF
+    """
+    try:
+        # Crear PDF de prueba
+        pdf_prueba = crear_pdf_prueba()
+        pdf_base64 = base64.b64encode(pdf_prueba).decode('utf-8')
+        
+        # Validar el PDF creado
+        validacion = validar_pdf_robusto(pdf_base64)
+        
+        return {
+            "message": "PDF de prueba creado",
+            "tamaño_bytes": len(pdf_prueba),
+            "tamaño_base64": len(pdf_base64),
+            "header": pdf_prueba[:10].decode('utf-8', errors='ignore'),
+            "validacion": validacion,
+            "pdf_base64_preview": pdf_base64[:100] + "..."
+        }
+        
+    except Exception as e:
+        logger.error(f"Error creando PDF de prueba: {str(e)}")
+        return {
+            "error": f"Error creando PDF de prueba: {str(e)}"
+        }
+
+@router.post("/test-telefono")
+async def test_telefono_endpoint(telefono: str):
+    """
+    Endpoint para probar formateo de teléfono
+    """
+    try:
+        telefono_formateado = formatear_telefono_colombia(telefono)
+        return {
+            "original": telefono,
+            "formateado": telefono_formateado,
+            "valido": True
+        }
+    except Exception as e:
+        return {
+            "original": telefono,
+            "error": str(e),
+            "valido": False
+        }
+
+@router.post("/test-pdf-completo")
+async def test_pdf_completo():
+    """
+    Endpoint para probar envío completo de PDF
+    """
+    try:
+        # Crear PDF de prueba
+        pdf_prueba = crear_pdf_prueba()
+        pdf_base64 = base64.b64encode(pdf_prueba).decode('utf-8')
+        
+        # Crear request de prueba
+        request_prueba = PDFRequest(
+            numero_telefono="573172288329",  # Sin +57
+            pdf_base64=pdf_base64,
+            nombre_archivo="test_recibo_123_2025-01-18.pdf",
+            metadata={
+                "numero_recibo": 123,
+                "empresa": "SOCOMAC",
+                "cliente": "David Cuellar",
+                "valor": "10000",
+                "concepto": "Mercancia nacional",
+                "fecha": "2025-01-18"
+            }
+        )
+        
+        # Probar formateo de teléfono
+        telefono_formateado = formatear_telefono_colombia(request_prueba.numero_telefono)
+        
+        # Probar validación de PDF
+        validacion = validar_pdf_robusto(request_prueba.pdf_base64)
+        
+        # Crear mensaje
+        mensaje = crear_mensaje_pdf(request_prueba.metadata, request_prueba.nombre_archivo)
+        
+        return {
+            "message": "Prueba completa realizada",
+            "telefono_original": request_prueba.numero_telefono,
+            "telefono_formateado": telefono_formateado,
+            "pdf_validacion": validacion,
+            "mensaje_generado": mensaje,
+            "metadata": request_prueba.metadata
+        }
+        
+    except Exception as e:
+        logger.error(f"Error en prueba completa: {str(e)}")
+        return {
+            "error": f"Error en prueba completa: {str(e)}"
         }
 
 @router.post("/enviar-pdf-alternativo")
