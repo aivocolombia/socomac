@@ -2,7 +2,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.webhook import router
 from app.api.whatsapp_endpoints import router as whatsapp_router
-from app.api.test_pdf_endpoint import router as test_pdf_router
 import os
 
 app = FastAPI(
@@ -43,4 +42,3 @@ def root():
 # Incluir routers
 app.include_router(router)  # Webhook existente
 app.include_router(whatsapp_router)  # Nuevos endpoints de WhatsApp
-app.include_router(test_pdf_router)  # Endpoint de prueba PDF fijo

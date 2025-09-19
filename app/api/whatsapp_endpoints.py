@@ -518,6 +518,85 @@ async def options_recibo_listo():
     """
     return {"message": "CORS preflight handled"}
 
+@router.post("/enviar-pdf-prueba")
+async def enviar_pdf_prueba_whatsapp(
+    request: PDFRequest,
+    whatsapp_supabase_service: WhatsAppSupabaseService = Depends(get_whatsapp_supabase_service)
+):
+    """
+    Endpoint de prueba para enviar PDF específico de Supabase
+    
+    Envía el PDF: Recibo_Caja_81_2025-09-18.pdf
+    URL: https://rixvqufnzasolxxklaue.supabase.co/storage/v1/object/public/receipt/Recibo_Caja_81_2025-09-18.pdf
+    """
+    try:
+        logger.info("🧪 PRUEBA: Enviando PDF específico de Supabase")
+        logger.info("=" * 80)
+        
+        # ✅ FORMATEAR TELÉFONO
+        try:
+            telefono_formateado = formatear_telefono_colombia(request.numero_telefono)
+            logger.info(f"📱 Teléfono formateado: {telefono_formateado}")
+        except Exception as e:
+            error_msg = f"Error formateando teléfono: {str(e)}"
+            logger.error(f"❌ {error_msg}")
+            raise HTTPException(status_code=400, detail=error_msg)
+        
+        # ✅ USAR PDF ESPECÍFICO DE SUPABASE
+        pdf_url = "https://rixvqufnzasolxxklaue.supabase.co/storage/v1/object/public/receipt/Recibo_Caja_81_2025-09-18.pdf"
+        nombre_archivo = "Recibo_Caja_81_2025-09-18.pdf"
+        
+        logger.info(f"📄 PDF de prueba: {nombre_archivo}")
+        logger.info(f"🔗 URL: {pdf_url}")
+        
+        # ✅ CREAR MENSAJE PERSONALIZADO
+        mensaje_personalizado = f"📄 Recibo de Caja SOCOMAC\n\nArchivo: {nombre_archivo}\n\nEste es un recibo de prueba enviado desde el sistema."
+        logger.info(f"💬 Mensaje: {mensaje_personalizado}")
+        
+        # ✅ ENVIAR PDF DESDE URL DE SUPABASE
+        logger.info("🚀 Enviando PDF desde URL de Supabase...")
+        
+        from app.services.whatsapp_service import WhatsAppService
+        whatsapp_service = WhatsAppService()
+        
+        resultado = whatsapp_service.enviar_documento(
+            telefono_formateado,
+            pdf_url,
+            nombre_archivo,
+            mensaje_personalizado
+        )
+        
+        # 📊 RESPUESTA
+        logger.info(f"📨 Resultado: {resultado}")
+        
+        if "error" in resultado:
+            error_msg = f"Error enviando PDF: {resultado['error']}"
+            logger.error(f"❌ {error_msg}")
+            raise HTTPException(status_code=400, detail=error_msg)
+        
+        # ✅ ÉXITO
+        logger.info(f"✅ PDF de prueba enviado exitosamente a {telefono_formateado}")
+        logger.info("=" * 80)
+        
+        return {
+            "success": True,
+            "message": "PDF de prueba enviado exitosamente",
+            "numero_telefono": telefono_formateado,
+            "archivo": nombre_archivo,
+            "url_supabase": pdf_url,
+            "metadata": request.metadata,
+            "whapi_response": resultado,
+            "tipo": "prueba"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        error_msg = f"Error inesperado: {str(e)}"
+        logger.error(f"💥 {error_msg}")
+        logger.error("=" * 80)
+        raise HTTPException(status_code=500, detail="Error interno del servidor")
+
 @router.post("/enviar-pdf")
 async def enviar_pdf_whatsapp(
     request: PDFRequest,

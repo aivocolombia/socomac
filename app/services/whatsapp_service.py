@@ -105,8 +105,7 @@ class WhatsAppService:
             "document": {
                 "link": documento_url,
                 "filename": nombre_archivo,
-                "caption": mensaje,
-                "mime_type": "application/pdf"
+                "caption": mensaje
             }
         }
         
