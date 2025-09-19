@@ -808,6 +808,58 @@ async def test_supabase_conexion():
             "error": str(e)
         }
 
+@router.post("/subir-documento-supabase")
+async def subir_documento_supabase(
+    request: PDFRequest
+):
+    """
+    Endpoint para subir un documento a Supabase Storage
+    
+    Recibe un PDF en base64 y lo sube a Supabase Storage
+    """
+    try:
+        logger.info("📤 Subiendo documento a Supabase Storage...")
+        logger.info(f"📄 Archivo: {request.nombre_archivo}")
+        logger.info(f"📱 Metadata: {request.metadata}")
+        
+        from app.services.supabase_storage import SupabaseStorageService
+        supabase_service = SupabaseStorageService()
+        
+        # Subir PDF a Supabase
+        resultado = supabase_service.subir_pdf(
+            request.pdf_base64,
+            request.nombre_archivo,
+            request.metadata
+        )
+        
+        if resultado.get("status") == "success":
+            logger.info(f"✅ Documento subido exitosamente: {resultado.get('url_publica')}")
+            
+            return {
+                "status": "success",
+                "message": "Documento subido exitosamente a Supabase",
+                "archivo_nombre": resultado.get("archivo_nombre"),
+                "url_publica": resultado.get("url_publica"),
+                "tamaño_bytes": resultado.get("tamaño_bytes"),
+                "metadata": resultado.get("metadata"),
+                "timestamp": resultado.get("timestamp")
+            }
+        else:
+            logger.error(f"❌ Error subiendo documento: {resultado.get('error')}")
+            return {
+                "status": "error",
+                "message": "Error subiendo documento a Supabase",
+                "error": resultado.get("error")
+            }
+            
+    except Exception as e:
+        logger.error(f"❌ Error inesperado: {str(e)}")
+        return {
+            "status": "error",
+            "message": "Error interno del servidor",
+            "error": str(e)
+        }
+
 @router.get("/debug-config")
 async def debug_config():
     """

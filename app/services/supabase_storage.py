@@ -41,13 +41,27 @@ class SupabaseStorageService:
             logger.info(f"🔗 Supabase URL: {self.supabase_url}")
             logger.info(f"🔑 Supabase Key: {self.supabase_key[:10]}...")
             
-            # Intentar obtener el bucket
-            bucket_info = self.supabase.storage.get_bucket(self.bucket_name)
-            logger.info(f"✅ Bucket '{self.bucket_name}' existe y está disponible")
-            logger.info(f"📊 Bucket info: {bucket_info}")
-            return True
+            # Método 1: Intentar obtener el bucket
+            try:
+                bucket_info = self.supabase.storage.get_bucket(self.bucket_name)
+                logger.info(f"✅ Bucket '{self.bucket_name}' existe y está disponible")
+                logger.info(f"📊 Bucket info: {bucket_info}")
+                return True
+            except Exception as e1:
+                logger.warning(f"⚠️ Método 1 falló: {e1}")
+                
+                # Método 2: Intentar listar archivos directamente
+                try:
+                    files = self.supabase.storage.from_(self.bucket_name).list()
+                    logger.info(f"✅ Bucket '{self.bucket_name}' accesible via listado")
+                    logger.info(f"📁 Archivos encontrados: {len(files)}")
+                    return True
+                except Exception as e2:
+                    logger.warning(f"⚠️ Método 2 falló: {e2}")
+                    return False
+            
         except Exception as e:
-            logger.error(f"❌ Error accediendo al bucket '{self.bucket_name}': {e}")
+            logger.error(f"❌ Error general accediendo al bucket '{self.bucket_name}': {e}")
             logger.error(f"🔍 Tipo de error: {type(e).__name__}")
             return False
     
@@ -161,7 +175,13 @@ class SupabaseStorageService:
         Listar archivos en el bucket
         """
         try:
-            result = self.supabase.storage.from_(self.bucket_name).list(limit=limite)
+            # Corregir: list() no acepta parámetro limit
+            result = self.supabase.storage.from_(self.bucket_name).list()
+            
+            # Aplicar límite manualmente si es necesario
+            if limite and len(result) > limite:
+                result = result[:limite]
+            
             return {
                 "status": "success",
                 "archivos": result,
