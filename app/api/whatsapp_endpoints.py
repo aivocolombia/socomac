@@ -923,11 +923,19 @@ async def subir_pdf_storage_only(
         import uuid
         from datetime import datetime
         
-        # Crear cliente de Supabase directamente
+        # Crear cliente de Supabase usando variables de entorno
         from supabase import create_client
+        import os
         
-        supabase_url = "https://rixvqufnzasolxxklaue.supabase.co"
-        supabase_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpeHZxdWZuemFzb2x4eGtsYXVlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ2NzQ4NzEsImV4cCI6MjA1MDI1MDg3MX0.7IX1zKt6zN8Q9Q9Q9Q9Q9Q9Q9Q9Q9Q9Q9Q9Q9Q9Q9Q"
+        supabase_url = os.getenv('SUPABASE_URL')
+        supabase_key = os.getenv('SUPABASE_KEY')
+        
+        if not supabase_url or not supabase_key:
+            return {
+                "status": "error",
+                "message": "Variables de entorno de Supabase no configuradas",
+                "error": "SUPABASE_URL y SUPABASE_KEY deben estar configurados"
+            }
         
         supabase = create_client(supabase_url, supabase_key)
         
@@ -971,6 +979,54 @@ async def subir_pdf_storage_only(
             "timestamp": datetime.now().isoformat()
         }
         
+    except Exception as e:
+        logger.error(f"❌ Error inesperado: {str(e)}")
+        return {
+            "status": "error",
+            "message": "Error interno del servidor",
+            "error": str(e)
+        }
+
+@router.post("/subir-pdf-directo")
+async def subir_pdf_directo(
+    request: PDFRequest
+):
+    """
+    Endpoint para subir PDF usando el servicio existente pero sin metadatos
+    """
+    try:
+        logger.info("📤 Subiendo PDF directo a Supabase...")
+        logger.info(f"📄 Archivo: {request.nombre_archivo}")
+        
+        from app.services.supabase_storage import SupabaseStorageService
+        supabase_service = SupabaseStorageService()
+        
+        # Subir PDF sin metadatos (None)
+        resultado = supabase_service.subir_pdf(
+            request.pdf_base64,
+            request.nombre_archivo,
+            None  # Sin metadatos
+        )
+        
+        if resultado.get("status") == "success":
+            logger.info(f"✅ PDF subido exitosamente: {resultado.get('url_publica')}")
+            
+            return {
+                "status": "success",
+                "message": "PDF subido exitosamente a Supabase",
+                "archivo_nombre": resultado.get("archivo_nombre"),
+                "url_publica": resultado.get("url_publica"),
+                "tamaño_bytes": resultado.get("tamaño_bytes"),
+                "timestamp": resultado.get("timestamp")
+            }
+        else:
+            logger.error(f"❌ Error subiendo PDF: {resultado.get('error')}")
+            return {
+                "status": "error",
+                "message": "Error subiendo PDF a Supabase",
+                "error": resultado.get("error")
+            }
+            
     except Exception as e:
         logger.error(f"❌ Error inesperado: {str(e)}")
         return {
