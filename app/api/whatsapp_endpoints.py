@@ -728,6 +728,36 @@ async def test_pdf_completo():
             "error": f"Error en prueba completa: {str(e)}"
         }
 
+@router.post("/test-upload-documento")
+async def test_upload_documento():
+    """
+    Endpoint para probar solo el upload de documento
+    """
+    try:
+        # Crear PDF de prueba
+        pdf_prueba = crear_pdf_prueba()
+        pdf_base64 = base64.b64encode(pdf_prueba).decode('utf-8')
+        
+        # Obtener servicio
+        whatsapp_service = WhatsAppService()
+        
+        # Probar upload
+        logger.info("🧪 Probando upload de documento...")
+        upload_result = whatsapp_service.subir_documento(pdf_base64, "test_upload.pdf")
+        
+        return {
+            "message": "Prueba de upload realizada",
+            "pdf_tamaño": len(pdf_prueba),
+            "pdf_base64_tamaño": len(pdf_base64),
+            "upload_result": upload_result
+        }
+        
+    except Exception as e:
+        logger.error(f"Error en prueba de upload: {str(e)}")
+        return {
+            "error": f"Error en prueba de upload: {str(e)}"
+        }
+
 @router.post("/enviar-pdf-alternativo")
 async def enviar_pdf_whatsapp_alternativo(
     request: PDFRequest,

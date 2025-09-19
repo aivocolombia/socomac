@@ -131,10 +131,63 @@ class WhatsAppService:
             logger.error(f"Error inesperado al enviar documento: {str(e)}")
             return {"error": f"Error inesperado: {str(e)}", "status": "failed"}
     
+    def subir_documento(self, documento_base64: str, nombre_archivo: str) -> Dict[str, Any]:
+        """
+        Subir documento a WHAPI y obtener ID
+        
+        Args:
+            documento_base64: Documento en base64
+            nombre_archivo: Nombre del archivo
+            
+        Returns:
+            Dict con ID del documento subido
+        """
+        logger.info(f"Subiendo documento: {nombre_archivo}")
+        
+        base_url = self.base_url.rstrip('/')
+        url = f"{base_url}/media/upload"
+        
+        headers = {
+            "Authorization": f"Bearer {self.whapi_token}",
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "type": "document",
+            "data": documento_base64,
+            "filename": nombre_archivo,
+            "mime_type": "application/pdf"
+        }
+        
+        try:
+            logger.info(f"Subiendo a WHAPI: {url}")
+            response = requests.post(url, headers=headers, json=payload, timeout=30)
+            
+            logger.info(f"Upload response status: {response.status_code}")
+            logger.info(f"Upload response content: {response.text}")
+            
+            response.raise_for_status()
+            result = response.json()
+            
+            logger.info(f"Documento subido exitosamente: {result}")
+            return {
+                "status": "success",
+                "document_id": result.get("id"),
+                "whatsapp_response": result
+            }
+            
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Error subiendo documento: {str(e)}")
+            return {"error": f"Error subiendo documento: {str(e)}", "status": "failed"}
+            
+        except Exception as e:
+            logger.error(f"Error inesperado subiendo documento: {str(e)}")
+            return {"error": f"Error inesperado: {str(e)}", "status": "failed"}
+
     def enviar_documento_base64(self, numero_telefono: str, documento_base64: str, 
                                nombre_archivo: str, mensaje: str = "") -> Dict[str, Any]:
         """
-        Envía un documento (PDF) a WhatsApp usando base64
+        Envía documento usando el método correcto: Upload + Send
         
         Args:
             numero_telefono: Número en formato internacional
@@ -145,11 +198,27 @@ class WhatsAppService:
         Returns:
             Dict con respuesta de la API
         """
-        logger.info(f"Enviando documento base64 a {numero_telefono}: {nombre_archivo}")
+        logger.info(f"Enviando documento a {numero_telefono}: {nombre_archivo}")
         
-        # ✅ URL CORREGIDA - Endpoint correcto para documentos
+        # Paso 1: Subir documento
+        logger.info("📤 Paso 1: Subiendo documento...")
+        upload_result = self.subir_documento(documento_base64, nombre_archivo)
+        
+        if "error" in upload_result:
+            logger.error(f"Error en upload: {upload_result['error']}")
+            return upload_result
+        
+        document_id = upload_result.get("document_id")
+        if not document_id:
+            logger.error("No se obtuvo ID del documento")
+            return {"error": "No se obtuvo ID del documento", "status": "failed"}
+        
+        logger.info(f"✅ Documento subido con ID: {document_id}")
+        
+        # Paso 2: Enviar mensaje con documento
+        logger.info("📤 Paso 2: Enviando mensaje con documento...")
         base_url = self.base_url.rstrip('/')
-        url = f"{base_url}/messages/document"
+        url = f"{base_url}/messages"
         
         headers = {
             "Authorization": f"Bearer {self.whapi_token}",
@@ -160,18 +229,13 @@ class WhatsAppService:
             "to": numero_telefono,
             "type": "document",
             "document": {
-                "filename": nombre_archivo,
-                "data": documento_base64,  # Whapi acepta base64 directamente
-                "mime_type": "application/pdf"
-            },
-            "caption": mensaje
+                "id": document_id,
+                "caption": mensaje
+            }
         }
         
         try:
-            logger.info(f"Enviando a WHAPI: {url}")
-            logger.info(f"Base URL original: {self.base_url}")
-            logger.info(f"Base URL limpia: {base_url}")
-            logger.info(f"URL final: {url}")
+            logger.info(f"Enviando mensaje a WHAPI: {url}")
             logger.info(f"Payload: {payload}")
             
             response = requests.post(url, headers=headers, json=payload, timeout=30)
@@ -182,23 +246,24 @@ class WhatsAppService:
             response.raise_for_status()
             
             result = response.json()
-            logger.info(f"Documento base64 enviado exitosamente: {result}")
+            logger.info(f"Documento enviado exitosamente: {result}")
             
             return {
                 "status": "success",
                 "message_id": result.get("id"),
+                "document_id": document_id,
                 "timestamp": datetime.now().isoformat(),
                 "whatsapp_response": result
             }
             
         except requests.exceptions.RequestException as e:
-            logger.error(f"Error al enviar documento base64: {str(e)}")
+            logger.error(f"Error al enviar mensaje: {str(e)}")
             logger.error(f"Response status: {getattr(e.response, 'status_code', 'N/A')}")
             logger.error(f"Response text: {getattr(e.response, 'text', 'N/A')}")
-            return {"error": f"Error al enviar documento: {str(e)}", "status": "failed"}
+            return {"error": f"Error al enviar mensaje: {str(e)}", "status": "failed"}
             
         except Exception as e:
-            logger.error(f"Error inesperado al enviar documento base64: {str(e)}")
+            logger.error(f"Error inesperado enviando mensaje: {str(e)}")
             return {"error": f"Error inesperado: {str(e)}", "status": "failed"}
 
     def verificar_conexion(self) -> Dict[str, Any]:
