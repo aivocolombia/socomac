@@ -35,7 +35,7 @@ class WhatsAppService:
         
         # ✅ URL CORREGIDA - Verificar si base_url ya tiene barra
         base_url = self.base_url.rstrip('/')
-        url = f"{base_url}/messages/text"
+        url = f"{base_url}/messages"
         
         headers = {
             "Authorization": f"Bearer {self.whapi_token}",
@@ -44,7 +44,10 @@ class WhatsAppService:
         
         payload = {
             "to": numero_telefono,
-            "body": mensaje
+            "type": "text",
+            "text": {
+                "body": mensaje
+            }
         }
         
         try:
@@ -279,7 +282,8 @@ class WhatsAppService:
             url = f"{base_url}/status"
             headers = {"Authorization": f"Bearer {self.whapi_token}"}
             
-            response = requests.get(url, headers=headers, timeout=10)
+            # Usar POST en lugar de GET para el endpoint de status
+            response = requests.post(url, headers=headers, timeout=10)
             response.raise_for_status()
             
             return {
