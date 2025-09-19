@@ -90,9 +90,9 @@ class WhatsAppService:
         """
         logger.info(f"Enviando documento a {numero_telefono}: {documento_url}")
         
-        # ✅ URL CORREGIDA - Verificar si base_url ya tiene barra
+        # ✅ URL CORREGIDA - Endpoint correcto para documentos
         base_url = self.base_url.rstrip('/')
-        url = f"{base_url}/messages"
+        url = f"{base_url}/messages/documents"
         
         headers = {
             "Authorization": f"Bearer {self.whapi_token}",
@@ -147,9 +147,9 @@ class WhatsAppService:
         """
         logger.info(f"Enviando documento base64 a {numero_telefono}: {nombre_archivo}")
         
-        # ✅ URL CORREGIDA - Verificar si base_url ya tiene barra
+        # ✅ URL CORREGIDA - Endpoint correcto para documentos
         base_url = self.base_url.rstrip('/')
-        url = f"{base_url}/messages"
+        url = f"{base_url}/messages/documents"
         
         headers = {
             "Authorization": f"Bearer {self.whapi_token}",

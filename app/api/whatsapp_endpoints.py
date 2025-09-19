@@ -4,6 +4,7 @@ from typing import Optional, Dict, Any
 import re
 import base64
 from app.services.whatsapp_service import WhatsAppService
+from app.services.whatsapp_service_alternative import WhatsAppServiceAlternative
 import logging
 
 # Configurar logging
@@ -137,6 +138,13 @@ class PDFRequest(BaseModel):
 def get_whatsapp_service():
     try:
         return WhatsAppService()
+    except ValueError as e:
+        raise HTTPException(status_code=500, detail=f"Error de configuración: {str(e)}")
+
+# Dependencia para obtener el servicio WhatsApp alternativo
+def get_whatsapp_service_alternative():
+    try:
+        return WhatsAppServiceAlternative()
     except ValueError as e:
         raise HTTPException(status_code=500, detail=f"Error de configuración: {str(e)}")
 
@@ -389,7 +397,7 @@ async def debug_config():
             "whapi_token_preview": whatsapp_service.whapi_token[:10] + "..." if whatsapp_service.whapi_token else "No configurado",
             "urls_generadas": {
                 "mensaje": f"{whatsapp_service.base_url.rstrip('/')}/messages/text",
-                "documento": f"{whatsapp_service.base_url.rstrip('/')}/messages",
+                "documento": f"{whatsapp_service.base_url.rstrip('/')}/messages/documents",
                 "status": f"{whatsapp_service.base_url.rstrip('/')}/status"
             }
         }
@@ -406,6 +414,68 @@ async def debug_config():
             "status": "error",
             "message": f"Error obteniendo configuración: {str(e)}"
         }
+
+@router.post("/enviar-pdf-alternativo")
+async def enviar_pdf_whatsapp_alternativo(
+    request: PDFRequest,
+    whatsapp_service: WhatsAppServiceAlternative = Depends(get_whatsapp_service_alternative)
+):
+    """
+    Endpoint alternativo para enviar PDF probando múltiples endpoints
+    """
+    try:
+        logger.info(f"Recibida solicitud alternativa para enviar PDF a {request.numero_telefono}")
+        logger.info(f"Archivo: {request.nombre_archivo}")
+        
+        # Decodificar PDF para obtener información adicional
+        pdf_bytes = base64.b64decode(request.pdf_base64)
+        size_mb = len(pdf_bytes) / (1024 * 1024)
+        
+        logger.info(f"Tamaño real del PDF: {size_mb:.2f}MB")
+        
+        # Validaciones adicionales
+        if size_mb > 10:
+            raise HTTPException(status_code=400, detail=f"PDF demasiado grande: {size_mb:.2f}MB. Máximo permitido: 10MB")
+        
+        # Validar que sea un PDF válido
+        if not pdf_bytes.startswith(b'%PDF-'):
+            raise HTTPException(status_code=400, detail="El archivo no es un PDF válido")
+        
+        # Crear mensaje personalizado basado en metadata
+        mensaje_personalizado = crear_mensaje_pdf(request.metadata, request.nombre_archivo)
+        
+        logger.info(f"Enviando PDF con servicio alternativo...")
+        
+        # Enviar PDF usando el servicio alternativo
+        resultado = whatsapp_service.enviar_documento_base64(
+            request.numero_telefono,
+            request.pdf_base64,
+            request.nombre_archivo,
+            mensaje_personalizado
+        )
+        
+        if "error" in resultado:
+            logger.error(f"Error al enviar PDF: {resultado['error']}")
+            raise HTTPException(status_code=400, detail=resultado["error"])
+        
+        logger.info(f"PDF enviado exitosamente a {request.numero_telefono}")
+        
+        return {
+            "success": True,
+            "message": "PDF enviado exitosamente (método alternativo)",
+            "numero_telefono": request.numero_telefono,
+            "archivo": request.nombre_archivo,
+            "tamaño_mb": round(size_mb, 2),
+            "metadata": request.metadata,
+            "endpoint_used": resultado.get("endpoint_used"),
+            "whatsapp_response": resultado
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error inesperado enviando PDF alternativo: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error interno del servidor")
 
 def crear_mensaje_pdf(metadata: Dict[str, Any], nombre_archivo: str) -> str:
     """
