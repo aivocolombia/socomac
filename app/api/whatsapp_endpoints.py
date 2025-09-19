@@ -316,35 +316,50 @@ async def enviar_pdf_whatsapp(
     whatsapp_service: WhatsAppService = Depends(get_whatsapp_service)
 ):
     """
-    Endpoint para enviar PDF por WhatsApp usando base64
+    Endpoint para enviar PDF por WhatsApp usando WHAPI
+    
+    Endpoint: POST /whatsapp/enviar-pdf
+    URL WHAPI: https://gate.whapi.cloud/messages/document
     """
     try:
-        logger.info(f"Recibida solicitud para enviar PDF a {request.numero_telefono}")
-        logger.info(f"Archivo: {request.nombre_archivo}")
-        logger.info(f"Tamaño del PDF: {len(request.pdf_base64)} caracteres base64")
+        # 🔍 LOGGING DETALLADO - Inicio de la solicitud
+        logger.info("=" * 60)
+        logger.info("📄 NUEVA SOLICITUD DE ENVÍO DE PDF")
+        logger.info("=" * 60)
+        logger.info(f"📱 Teléfono destino: {request.numero_telefono}")
+        logger.info(f"📄 Archivo: {request.nombre_archivo}")
+        logger.info(f"📊 Tamaño base64: {len(request.pdf_base64)} caracteres")
+        logger.info(f"📋 Metadata: {request.metadata}")
         
         # Decodificar PDF para obtener información adicional
         pdf_bytes = base64.b64decode(request.pdf_base64)
         size_mb = len(pdf_bytes) / (1024 * 1024)
         
-        logger.info(f"Tamaño real del PDF: {size_mb:.2f}MB")
+        logger.info(f"📏 Tamaño real del PDF: {size_mb:.2f}MB")
         
-        # Validaciones adicionales
+        # ✅ VALIDACIONES ADICIONALES
         if size_mb > 10:
-            raise HTTPException(status_code=400, detail=f"PDF demasiado grande: {size_mb:.2f}MB. Máximo permitido: 10MB")
+            error_msg = f"PDF demasiado grande: {size_mb:.2f}MB. Máximo permitido: 10MB"
+            logger.error(f"❌ {error_msg}")
+            raise HTTPException(status_code=400, detail=error_msg)
         
         # Validar que sea un PDF válido
         if not pdf_bytes.startswith(b'%PDF-'):
-            raise HTTPException(status_code=400, detail="El archivo no es un PDF válido")
+            error_msg = "El archivo no es un PDF válido"
+            logger.error(f"❌ {error_msg}")
+            raise HTTPException(status_code=400, detail=error_msg)
         
         # Crear mensaje personalizado basado en metadata
         mensaje_personalizado = crear_mensaje_pdf(request.metadata, request.nombre_archivo)
+        logger.info(f"💬 Mensaje personalizado: {mensaje_personalizado}")
         
-        logger.info(f"Enviando PDF a WHAPI...")
-        logger.info(f"URL: {whatsapp_service.base_url}/messages")
-        logger.info(f"Token configurado: {'Sí' if whatsapp_service.whapi_token else 'No'}")
+        # 🔧 CONFIGURACIÓN WHAPI
+        whapi_url = f"{whatsapp_service.base_url.rstrip('/')}/messages/document"
+        logger.info(f"🌐 URL WHAPI: {whapi_url}")
+        logger.info(f"🔑 Token configurado: {'Sí' if whatsapp_service.whapi_token else 'No'}")
         
-        # Enviar PDF usando el servicio WhatsApp
+        # 📤 ENVÍO A WHAPI
+        logger.info("🚀 Enviando PDF a WHAPI...")
         resultado = whatsapp_service.enviar_documento_base64(
             request.numero_telefono,
             request.pdf_base64,
@@ -352,11 +367,17 @@ async def enviar_pdf_whatsapp(
             mensaje_personalizado
         )
         
+        # 📊 RESPUESTA DE WHAPI
+        logger.info(f"📨 Respuesta WHAPI: {resultado}")
+        
         if "error" in resultado:
-            logger.error(f"Error al enviar PDF: {resultado['error']}")
+            error_msg = f"Error al enviar PDF: {resultado['error']}"
+            logger.error(f"❌ {error_msg}")
             raise HTTPException(status_code=400, detail=resultado["error"])
         
-        logger.info(f"PDF enviado exitosamente a {request.numero_telefono}")
+        # ✅ ÉXITO
+        logger.info(f"✅ PDF enviado exitosamente a {request.numero_telefono}")
+        logger.info("=" * 60)
         
         return {
             "success": True,
@@ -365,13 +386,15 @@ async def enviar_pdf_whatsapp(
             "archivo": request.nombre_archivo,
             "tamaño_mb": round(size_mb, 2),
             "metadata": request.metadata,
-            "whatsapp_response": resultado
+            "whapi_response": resultado
         }
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error inesperado enviando PDF: {str(e)}")
+        error_msg = f"Error inesperado enviando PDF: {str(e)}"
+        logger.error(f"💥 {error_msg}")
+        logger.error("=" * 60)
         raise HTTPException(status_code=500, detail="Error interno del servidor")
 
 @router.options("/enviar-pdf")
