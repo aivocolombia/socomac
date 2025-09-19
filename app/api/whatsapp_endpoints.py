@@ -1,7 +1,8 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, validator
-from typing import Optional
+from typing import Optional, Dict, Any
 import re
+import base64
 from app.services.whatsapp_service import WhatsAppService
 import logging
 
@@ -78,6 +79,59 @@ class ReciboListoRequest(BaseModel):
         if not numero_limpio.isdigit() or len(numero_limpio) < 10 or len(numero_limpio) > 15:
             raise ValueError('Número de teléfono inválido')
         return numero_limpio
+
+class PDFRequest(BaseModel):
+    numero_telefono: str
+    pdf_base64: str
+    nombre_archivo: str
+    metadata: Optional[Dict[str, Any]] = {}
+    
+    @validator('numero_telefono')
+    def validar_numero_telefono(cls, v):
+        numero_limpio = re.sub(r'[^\d]', '', v)
+        if not numero_limpio.isdigit() or len(numero_limpio) < 10 or len(numero_limpio) > 15:
+            raise ValueError('Número de teléfono inválido')
+        return numero_limpio
+    
+    @validator('pdf_base64')
+    def validar_pdf_base64(cls, v):
+        if not v or not v.strip():
+            raise ValueError('PDF base64 no puede estar vacío')
+        
+        try:
+            # Intentar decodificar para validar que sea base64 válido
+            pdf_bytes = base64.b64decode(v)
+            
+            # Validar que sea un PDF válido
+            if not pdf_bytes.startswith(b'%PDF-'):
+                raise ValueError('El archivo no es un PDF válido')
+            
+            # Validar tamaño (máximo 10MB)
+            size_mb = len(pdf_bytes) / (1024 * 1024)
+            if size_mb > 10:
+                raise ValueError(f'El PDF es muy grande ({size_mb:.1f}MB). Máximo permitido: 10MB')
+            
+            return v
+            
+        except base64.binascii.Error:
+            raise ValueError('Base64 inválido')
+        except Exception as e:
+            raise ValueError(f'Error validando PDF: {str(e)}')
+    
+    @validator('nombre_archivo')
+    def validar_nombre_archivo(cls, v):
+        if not v or not v.strip():
+            raise ValueError('Nombre de archivo no puede estar vacío')
+        
+        # Validar extensión
+        if not v.lower().endswith('.pdf'):
+            raise ValueError('El archivo debe tener extensión .pdf')
+        
+        # Validar longitud
+        if len(v) > 100:
+            raise ValueError('Nombre de archivo muy largo (máximo 100 caracteres)')
+        
+        return v.strip()
 
 # Dependencia para obtener el servicio WhatsApp
 def get_whatsapp_service():
@@ -247,3 +301,140 @@ async def options_recibo_listo():
     Endpoint OPTIONS para manejar preflight CORS
     """
     return {"message": "CORS preflight handled"}
+
+@router.post("/enviar-pdf")
+async def enviar_pdf_whatsapp(
+    request: PDFRequest,
+    whatsapp_service: WhatsAppService = Depends(get_whatsapp_service)
+):
+    """
+    Endpoint para enviar PDF por WhatsApp usando base64
+    """
+    try:
+        logger.info(f"Recibida solicitud para enviar PDF a {request.numero_telefono}")
+        logger.info(f"Archivo: {request.nombre_archivo}")
+        logger.info(f"Tamaño del PDF: {len(request.pdf_base64)} caracteres base64")
+        
+        # Decodificar PDF para obtener información adicional
+        pdf_bytes = base64.b64decode(request.pdf_base64)
+        size_mb = len(pdf_bytes) / (1024 * 1024)
+        
+        logger.info(f"Tamaño real del PDF: {size_mb:.2f}MB")
+        
+        # Crear mensaje personalizado basado en metadata
+        mensaje_personalizado = crear_mensaje_pdf(request.metadata, request.nombre_archivo)
+        
+        # Enviar PDF usando el servicio WhatsApp
+        resultado = whatsapp_service.enviar_documento_base64(
+            request.numero_telefono,
+            request.pdf_base64,
+            request.nombre_archivo,
+            mensaje_personalizado
+        )
+        
+        if "error" in resultado:
+            logger.error(f"Error al enviar PDF: {resultado['error']}")
+            raise HTTPException(status_code=400, detail=resultado["error"])
+        
+        logger.info(f"PDF enviado exitosamente a {request.numero_telefono}")
+        
+        return {
+            "success": True,
+            "message": "PDF enviado exitosamente",
+            "numero_telefono": request.numero_telefono,
+            "archivo": request.nombre_archivo,
+            "tamaño_mb": round(size_mb, 2),
+            "metadata": request.metadata,
+            "whatsapp_response": resultado
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error inesperado enviando PDF: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error interno del servidor")
+
+@router.options("/enviar-pdf")
+async def options_enviar_pdf():
+    """
+    Endpoint OPTIONS para manejar preflight CORS
+    """
+    return {"message": "CORS preflight handled"}
+
+def crear_mensaje_pdf(metadata: Dict[str, Any], nombre_archivo: str) -> str:
+    """
+    Crear mensaje personalizado para el PDF basado en metadata
+    """
+    mensaje = f"📄 *Recibo de Caja SOCOMAC*\n\n"
+    mensaje += f"📋 *Archivo:* {nombre_archivo}\n"
+    
+    if metadata:
+        if metadata.get("numero_recibo"):
+            mensaje += f"🔢 *Número de recibo:* {metadata['numero_recibo']}\n"
+        
+        if metadata.get("empresa"):
+            mensaje += f"🏢 *Empresa:* {metadata['empresa']}\n"
+        
+        if metadata.get("cliente"):
+            mensaje += f"👤 *Cliente:* {metadata['cliente']}\n"
+        
+        if metadata.get("valor"):
+            valor_formateado = f"${int(metadata['valor']):,}"
+            mensaje += f"💰 *Valor:* {valor_formateado}\n"
+        
+        if metadata.get("concepto"):
+            mensaje += f"📝 *Concepto:* {metadata['concepto']}\n"
+        
+        if metadata.get("fecha"):
+            mensaje += f"📅 *Fecha:* {metadata['fecha']}\n"
+    
+    mensaje += f"\nEste es un recibo generado automáticamente."
+    
+    return mensaje
+
+@router.post("/enviar-documento-completo")
+async def enviar_documento_completo(
+    request: DocumentoRequest,
+    whatsapp_service: WhatsAppService = Depends(get_whatsapp_service)
+):
+    """
+    Endpoint para enviar documento completo con URL de Supabase
+    """
+    try:
+        logger.info(f"Recibida solicitud para enviar documento a {request.numero_telefono}")
+        
+        # Validar que la URL sea de Supabase
+        if not request.documento_url.startswith('https://'):
+            raise HTTPException(status_code=400, detail="URL del documento inválida")
+        
+        resultado = whatsapp_service.enviar_documento(
+            request.numero_telefono,
+            request.documento_url,
+            request.nombre_archivo,
+            request.mensaje
+        )
+        
+        if "error" in resultado:
+            logger.error(f"Error al enviar documento: {resultado['error']}")
+            raise HTTPException(status_code=400, detail=resultado["error"])
+        
+        logger.info(f"Documento enviado exitosamente a {request.numero_telefono}")
+        
+        return {
+            "status": "success",
+            "message": "Documento enviado correctamente",
+            "data": {
+                "numero_telefono": request.numero_telefono,
+                "documento_url": request.documento_url,
+                "nombre_archivo": request.nombre_archivo,
+                "mensaje": request.mensaje,
+                "message_id": resultado.get("message_id"),
+                "timestamp": resultado.get("timestamp")
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error inesperado: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error interno del servidor")

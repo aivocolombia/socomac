@@ -123,6 +123,62 @@ class WhatsAppService:
             logger.error(f"Error inesperado al enviar documento: {str(e)}")
             return {"error": f"Error inesperado: {str(e)}", "status": "failed"}
     
+    def enviar_documento_base64(self, numero_telefono: str, documento_base64: str, 
+                               nombre_archivo: str, mensaje: str = "") -> Dict[str, Any]:
+        """
+        Envía un documento (PDF) a WhatsApp usando base64
+        
+        Args:
+            numero_telefono: Número en formato internacional
+            documento_base64: Documento en formato base64
+            nombre_archivo: Nombre del archivo
+            mensaje: Mensaje opcional que acompaña el documento
+            
+        Returns:
+            Dict con respuesta de la API
+        """
+        logger.info(f"Enviando documento base64 a {numero_telefono}: {nombre_archivo}")
+        
+        url = f"{self.base_url}/messages/documents"
+        
+        headers = {
+            "Authorization": f"Bearer {self.whapi_token}",
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "to": numero_telefono,
+            "type": "document",
+            "document": {
+                "filename": nombre_archivo,
+                "data": documento_base64,  # Whapi acepta base64 directamente
+                "mime_type": "application/pdf"
+            },
+            "caption": mensaje
+        }
+        
+        try:
+            response = requests.post(url, headers=headers, json=payload, timeout=30)
+            response.raise_for_status()
+            
+            result = response.json()
+            logger.info(f"Documento base64 enviado exitosamente: {result}")
+            
+            return {
+                "status": "success",
+                "message_id": result.get("id"),
+                "timestamp": datetime.now().isoformat(),
+                "whatsapp_response": result
+            }
+            
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Error al enviar documento base64: {str(e)}")
+            return {"error": f"Error al enviar documento: {str(e)}", "status": "failed"}
+            
+        except Exception as e:
+            logger.error(f"Error inesperado al enviar documento base64: {str(e)}")
+            return {"error": f"Error inesperado: {str(e)}", "status": "failed"}
+
     def verificar_conexion(self) -> Dict[str, Any]:
         """
         Verifica la conexión con Whapi
