@@ -13,6 +13,10 @@ class WhatsAppService:
         self.whapi_token = os.getenv('WHAPI_TOKEN')
         self.base_url = os.getenv('WHAPI_BASE_URL', 'https://gate.whapi.cloud')
         
+        # Logging de configuración
+        logger.info(f"WHAPI_BASE_URL configurado: {self.base_url}")
+        logger.info(f"WHAPI_TOKEN configurado: {'Sí' if self.whapi_token else 'No'}")
+        
         if not self.whapi_token:
             raise ValueError("WHAPI_TOKEN no está configurado en las variables de entorno")
     
@@ -29,7 +33,9 @@ class WhatsAppService:
         """
         logger.info(f"Enviando mensaje a {numero_telefono}: {mensaje}")
         
-        url = f"{self.base_url}/messages/text"
+        # ✅ URL CORREGIDA - Verificar si base_url ya tiene barra
+        base_url = self.base_url.rstrip('/')
+        url = f"{base_url}/messages/text"
         
         headers = {
             "Authorization": f"Bearer {self.whapi_token}",
@@ -84,8 +90,9 @@ class WhatsAppService:
         """
         logger.info(f"Enviando documento a {numero_telefono}: {documento_url}")
         
-        # ✅ URL CORREGIDA - Sin doble slash
-        url = f"{self.base_url}/messages"
+        # ✅ URL CORREGIDA - Verificar si base_url ya tiene barra
+        base_url = self.base_url.rstrip('/')
+        url = f"{base_url}/messages"
         
         headers = {
             "Authorization": f"Bearer {self.whapi_token}",
@@ -140,8 +147,9 @@ class WhatsAppService:
         """
         logger.info(f"Enviando documento base64 a {numero_telefono}: {nombre_archivo}")
         
-        # ✅ URL CORREGIDA - Sin doble slash
-        url = f"{self.base_url}/messages"
+        # ✅ URL CORREGIDA - Verificar si base_url ya tiene barra
+        base_url = self.base_url.rstrip('/')
+        url = f"{base_url}/messages"
         
         headers = {
             "Authorization": f"Bearer {self.whapi_token}",
@@ -161,6 +169,9 @@ class WhatsAppService:
         
         try:
             logger.info(f"Enviando a WHAPI: {url}")
+            logger.info(f"Base URL original: {self.base_url}")
+            logger.info(f"Base URL limpia: {base_url}")
+            logger.info(f"URL final: {url}")
             logger.info(f"Payload: {payload}")
             
             response = requests.post(url, headers=headers, json=payload, timeout=30)
@@ -198,7 +209,9 @@ class WhatsAppService:
             Dict con el estado de la conexión
         """
         try:
-            url = f"{self.base_url}/status"
+            # ✅ URL CORREGIDA - Verificar si base_url ya tiene barra
+            base_url = self.base_url.rstrip('/')
+            url = f"{base_url}/status"
             headers = {"Authorization": f"Bearer {self.whapi_token}"}
             
             response = requests.get(url, headers=headers, timeout=10)

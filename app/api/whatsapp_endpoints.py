@@ -373,6 +373,40 @@ async def options_enviar_pdf():
     """
     return {"message": "CORS preflight handled"}
 
+@router.get("/debug-config")
+async def debug_config():
+    """
+    Endpoint para debuggear la configuración de WHAPI
+    """
+    try:
+        whatsapp_service = WhatsAppService()
+        
+        # Información de configuración
+        config_info = {
+            "whapi_base_url": whatsapp_service.base_url,
+            "whapi_base_url_limpia": whatsapp_service.base_url.rstrip('/'),
+            "whapi_token_configurado": bool(whatsapp_service.whapi_token),
+            "whapi_token_preview": whatsapp_service.whapi_token[:10] + "..." if whatsapp_service.whapi_token else "No configurado",
+            "urls_generadas": {
+                "mensaje": f"{whatsapp_service.base_url.rstrip('/')}/messages/text",
+                "documento": f"{whatsapp_service.base_url.rstrip('/')}/messages",
+                "status": f"{whatsapp_service.base_url.rstrip('/')}/status"
+            }
+        }
+        
+        return {
+            "status": "success",
+            "message": "Configuración de WHAPI",
+            "config": config_info
+        }
+        
+    except Exception as e:
+        logger.error(f"Error en debug config: {str(e)}")
+        return {
+            "status": "error",
+            "message": f"Error obteniendo configuración: {str(e)}"
+        }
+
 def crear_mensaje_pdf(metadata: Dict[str, Any], nombre_archivo: str) -> str:
     """
     Crear mensaje personalizado para el PDF basado en metadata
