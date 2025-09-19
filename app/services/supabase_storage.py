@@ -23,10 +23,11 @@ class SupabaseStorageService:
             raise ValueError("Supabase no está disponible. Instala con: pip install supabase")
         
         self.supabase_url = os.getenv('SUPABASE_URL')
-        self.supabase_key = os.getenv('SUPABASE_ANON_KEY')
+        # Usar la misma variable que ya tienes configurada
+        self.supabase_key = os.getenv('SUPABASE_KEY')
         
         if not self.supabase_url or not self.supabase_key:
-            raise ValueError("SUPABASE_URL y SUPABASE_ANON_KEY deben estar configurados")
+            raise ValueError("SUPABASE_URL y SUPABASE_KEY deben estar configurados")
         
         self.supabase: Client = create_client(self.supabase_url, self.supabase_key)
         self.bucket_name = "documentos-whatsapp"
