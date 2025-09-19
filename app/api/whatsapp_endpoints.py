@@ -908,6 +908,77 @@ async def subir_pdf_simple(
             "error": str(e)
         }
 
+@router.post("/subir-pdf-storage-only")
+async def subir_pdf_storage_only(
+    request: PDFRequest
+):
+    """
+    Endpoint para subir PDF solo al storage de Supabase (sin base de datos)
+    """
+    try:
+        logger.info("📤 Subiendo PDF solo al storage de Supabase...")
+        logger.info(f"📄 Archivo: {request.nombre_archivo}")
+        
+        import base64
+        import uuid
+        from datetime import datetime
+        
+        # Crear cliente de Supabase directamente
+        from supabase import create_client
+        
+        supabase_url = "https://rixvqufnzasolxxklaue.supabase.co"
+        supabase_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpeHZxdWZuemFzb2x4eGtsYXVlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ2NzQ4NzEsImV4cCI6MjA1MDI1MDg3MX0.7IX1zKt6zN8Q9Q9Q9Q9Q9Q9Q9Q9Q9Q9Q9Q9Q9Q9Q9Q"
+        
+        supabase = create_client(supabase_url, supabase_key)
+        
+        # Generar nombre único
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        unique_id = str(uuid.uuid4())[:8]
+        nombre_unico = f"{timestamp}_{unique_id}_{request.nombre_archivo}"
+        
+        # Decodificar base64
+        pdf_bytes = base64.b64decode(request.pdf_base64)
+        
+        # Subir archivo directamente al storage
+        result = supabase.storage.from_("receipt").upload(
+            nombre_unico,
+            pdf_bytes,
+            file_options={
+                "content-type": "application/pdf",
+                "cache-control": "3600"
+            }
+        )
+        
+        if result.get("error"):
+            logger.error(f"❌ Error subiendo archivo: {result['error']}")
+            return {
+                "status": "error",
+                "message": "Error subiendo archivo a Supabase Storage",
+                "error": result['error']
+            }
+        
+        # Obtener URL pública
+        public_url = supabase.storage.from_("receipt").get_public_url(nombre_unico)
+        
+        logger.info(f"✅ PDF subido exitosamente: {public_url}")
+        
+        return {
+            "status": "success",
+            "message": "PDF subido exitosamente a Supabase Storage",
+            "archivo_nombre": nombre_unico,
+            "url_publica": public_url,
+            "tamaño_bytes": len(pdf_bytes),
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Error inesperado: {str(e)}")
+        return {
+            "status": "error",
+            "message": "Error interno del servidor",
+            "error": str(e)
+        }
+
 @router.get("/debug-config")
 async def debug_config():
     """

@@ -130,23 +130,11 @@ class SupabaseStorageService:
     
     def _guardar_metadatos(self, nombre_archivo: str, metadata: Dict[str, Any], url_publica: str):
         """
-        Guardar metadatos en la tabla de documentos
+        Guardar metadatos en la tabla de documentos - DESHABILITADO por RLS
         """
-        try:
-            # Crear registro en la tabla documentos
-            documento_data = {
-                "nombre_archivo": nombre_archivo,
-                "url_publica": url_publica,
-                "metadata": metadata,
-                "fecha_creacion": datetime.now().isoformat(),
-                "tipo": "pdf_whatsapp"
-            }
-            
-            result = self.supabase.table("documentos_whatsapp").insert(documento_data).execute()
-            logger.info(f"📊 Metadatos guardados: {result}")
-            
-        except Exception as e:
-            logger.warning(f"⚠️ Error guardando metadatos: {e}")
+        # DESHABILITADO: No guardar metadatos para evitar problemas de RLS
+        logger.info(f"📊 Metadatos deshabilitados por RLS: {nombre_archivo}")
+        return
     
     def obtener_url_publica(self, nombre_archivo: str) -> Optional[str]:
         """
