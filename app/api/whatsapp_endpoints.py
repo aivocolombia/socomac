@@ -5,6 +5,7 @@ import re
 import base64
 from app.services.whatsapp_service import WhatsAppService
 from app.services.whatsapp_service_alternative import WhatsAppServiceAlternative
+from app.services.whatsapp_supabase_service import WhatsAppSupabaseService
 import logging
 
 # Configurar logging
@@ -145,6 +146,13 @@ def get_whatsapp_service():
 def get_whatsapp_service_alternative():
     try:
         return WhatsAppServiceAlternative()
+    except ValueError as e:
+        raise HTTPException(status_code=500, detail=f"Error de configuración: {str(e)}")
+
+# Dependencia para obtener el servicio WhatsApp + Supabase
+def get_whatsapp_supabase_service():
+    try:
+        return WhatsAppSupabaseService()
     except ValueError as e:
         raise HTTPException(status_code=500, detail=f"Error de configuración: {str(e)}")
 
@@ -756,6 +764,168 @@ async def test_upload_documento():
         logger.error(f"Error en prueba de upload: {str(e)}")
         return {
             "error": f"Error en prueba de upload: {str(e)}"
+        }
+
+@router.post("/enviar-pdf-supabase")
+async def enviar_pdf_supabase(
+    request: PDFRequest,
+    whatsapp_supabase_service: WhatsAppSupabaseService = Depends(get_whatsapp_supabase_service)
+):
+    """
+    Endpoint para enviar PDF usando Supabase Storage + WHAPI
+    
+    Flujo:
+    1. Subir PDF a Supabase Storage
+    2. Obtener URL pública
+    3. Enviar por WhatsApp usando la URL
+    """
+    try:
+        # 🔍 LOGGING DETALLADO
+        log_solicitud_pdf(request)
+        
+        # ✅ FORMATEAR TELÉFONO
+        try:
+            telefono_formateado = formatear_telefono_colombia(request.numero_telefono)
+            logger.info(f"📱 Teléfono formateado: {telefono_formateado}")
+        except Exception as e:
+            error_msg = f"Error formateando teléfono: {str(e)}"
+            logger.error(f"❌ {error_msg}")
+            raise HTTPException(status_code=400, detail=error_msg)
+        
+        # ✅ VALIDAR PDF
+        validacion = validar_pdf_robusto(request.pdf_base64)
+        if not validacion["valido"]:
+            error_msg = f"PDF inválido: {validacion['error']}"
+            logger.error(f"❌ {error_msg}")
+            raise HTTPException(status_code=400, detail=error_msg)
+        
+        logger.info(f"✅ PDF válido: {validacion['tamaño_mb']}MB")
+        
+        # ✅ CREAR MENSAJE PERSONALIZADO
+        mensaje_personalizado = crear_mensaje_pdf(request.metadata, request.nombre_archivo)
+        logger.info(f"💬 Mensaje: {mensaje_personalizado}")
+        
+        # ✅ ENVIAR CON SUPABASE
+        logger.info("🚀 Enviando con Supabase Storage...")
+        resultado = whatsapp_supabase_service.enviar_pdf_con_supabase(
+            telefono_formateado,
+            request.pdf_base64,
+            request.nombre_archivo,
+            mensaje_personalizado,
+            request.metadata
+        )
+        
+        # 📊 RESPUESTA
+        logger.info(f"📨 Resultado: {resultado}")
+        
+        if "error" in resultado:
+            error_msg = f"Error enviando PDF: {resultado['error']}"
+            logger.error(f"❌ {error_msg}")
+            raise HTTPException(status_code=400, detail=error_msg)
+        
+        # ✅ ÉXITO
+        logger.info(f"✅ PDF enviado exitosamente con Supabase a {telefono_formateado}")
+        logger.info("=" * 80)
+        
+        return {
+            "success": True,
+            "message": "PDF enviado exitosamente (Supabase Storage)",
+            "numero_telefono": telefono_formateado,
+            "archivo": request.nombre_archivo,
+            "tamaño_mb": validacion["tamaño_mb"],
+            "url_supabase": resultado.get("url_supabase"),
+            "metadata": request.metadata,
+            "supabase_result": resultado.get("supabase_result"),
+            "whatsapp_result": resultado.get("whatsapp_result")
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        error_msg = f"Error inesperado: {str(e)}"
+        logger.error(f"💥 {error_msg}")
+        logger.error("=" * 80)
+        raise HTTPException(status_code=500, detail="Error interno del servidor")
+
+@router.get("/documentos-supabase")
+async def listar_documentos_supabase(
+    limite: int = 50,
+    whatsapp_supabase_service: WhatsAppSupabaseService = Depends(get_whatsapp_supabase_service)
+):
+    """
+    Listar documentos en Supabase Storage
+    """
+    try:
+        resultado = whatsapp_supabase_service.listar_documentos(limite)
+        return resultado
+    except Exception as e:
+        logger.error(f"Error listando documentos: {str(e)}")
+        return {"error": f"Error listando documentos: {str(e)}"}
+
+@router.delete("/documentos-supabase/{nombre_archivo}")
+async def eliminar_documento_supabase(
+    nombre_archivo: str,
+    whatsapp_supabase_service: WhatsAppSupabaseService = Depends(get_whatsapp_supabase_service)
+):
+    """
+    Eliminar documento de Supabase Storage
+    """
+    try:
+        resultado = whatsapp_supabase_service.eliminar_documento(nombre_archivo)
+        return {
+            "success": resultado,
+            "message": f"Documento {nombre_archivo} {'eliminado' if resultado else 'no eliminado'}"
+        }
+    except Exception as e:
+        logger.error(f"Error eliminando documento: {str(e)}")
+        return {"error": f"Error eliminando documento: {str(e)}"}
+
+@router.post("/test-supabase-url")
+async def test_supabase_url():
+    """
+    Endpoint para probar solo la extracción de URL de Supabase
+    """
+    try:
+        # Crear PDF de prueba
+        pdf_prueba = crear_pdf_prueba()
+        pdf_base64 = base64.b64encode(pdf_prueba).decode('utf-8')
+        
+        # Obtener servicio Supabase
+        from app.services.supabase_storage import SupabaseStorageService
+        supabase_service = SupabaseStorageService()
+        
+        # Probar upload y extracción de URL
+        logger.info("🧪 Probando extracción de URL de Supabase...")
+        upload_result = supabase_service.subir_pdf(
+            pdf_base64, 
+            "test_url_extraction.pdf",
+            {"test": "url_extraction"}
+        )
+        
+        if "error" in upload_result:
+            return {
+                "error": upload_result["error"],
+                "status": "failed"
+            }
+        
+        # Extraer URL directamente
+        url_publica = upload_result["url_publica"]
+        
+        return {
+            "message": "URL extraída exitosamente",
+            "pdf_tamaño": len(pdf_prueba),
+            "pdf_base64_tamaño": len(pdf_base64),
+            "url_publica": url_publica,
+            "archivo_nombre": upload_result["archivo_nombre"],
+            "tamaño_bytes": upload_result["tamaño_bytes"],
+            "metadata": upload_result["metadata"],
+            "upload_result": upload_result
+        }
+        
+    except Exception as e:
+        logger.error(f"Error en prueba de URL: {str(e)}")
+        return {
+            "error": f"Error en prueba de URL: {str(e)}"
         }
 
 @router.post("/enviar-pdf-alternativo")
