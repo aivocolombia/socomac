@@ -860,6 +860,54 @@ async def subir_documento_supabase(
             "error": str(e)
         }
 
+@router.post("/subir-pdf-simple")
+async def subir_pdf_simple(
+    request: PDFRequest
+):
+    """
+    Endpoint simple para subir PDF a Supabase sin metadatos
+    """
+    try:
+        logger.info("📤 Subiendo PDF simple a Supabase...")
+        logger.info(f"📄 Archivo: {request.nombre_archivo}")
+        
+        from app.services.supabase_storage import SupabaseStorageService
+        supabase_service = SupabaseStorageService()
+        
+        # Subir PDF sin metadatos
+        resultado = supabase_service.subir_pdf(
+            request.pdf_base64,
+            request.nombre_archivo,
+            None  # Sin metadatos para evitar RLS
+        )
+        
+        if resultado.get("status") == "success":
+            logger.info(f"✅ PDF subido exitosamente: {resultado.get('url_publica')}")
+            
+            return {
+                "status": "success",
+                "message": "PDF subido exitosamente a Supabase",
+                "archivo_nombre": resultado.get("archivo_nombre"),
+                "url_publica": resultado.get("url_publica"),
+                "tamaño_bytes": resultado.get("tamaño_bytes"),
+                "timestamp": resultado.get("timestamp")
+            }
+        else:
+            logger.error(f"❌ Error subiendo PDF: {resultado.get('error')}")
+            return {
+                "status": "error",
+                "message": "Error subiendo PDF a Supabase",
+                "error": resultado.get("error")
+            }
+            
+    except Exception as e:
+        logger.error(f"❌ Error inesperado: {str(e)}")
+        return {
+            "status": "error",
+            "message": "Error interno del servidor",
+            "error": str(e)
+        }
+
 @router.get("/debug-config")
 async def debug_config():
     """

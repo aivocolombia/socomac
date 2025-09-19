@@ -109,9 +109,9 @@ class SupabaseStorageService:
             # Obtener URL pública
             public_url = self.supabase.storage.from_(self.bucket_name).get_public_url(nombre_unico)
             
-            # Guardar metadatos en base de datos (opcional)
-            if metadata:
-                self._guardar_metadatos(nombre_unico, metadata, public_url)
+            # Guardar metadatos en base de datos (opcional) - DESHABILITADO por RLS
+            # if metadata:
+            #     self._guardar_metadatos(nombre_unico, metadata, public_url)
             
             logger.info(f"✅ PDF subido exitosamente: {public_url}")
             
