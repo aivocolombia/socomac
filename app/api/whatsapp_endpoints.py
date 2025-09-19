@@ -630,10 +630,28 @@ async def debug_config():
             }
         }
         
+        # Configuración Supabase
+        try:
+            from app.services.supabase_storage import SupabaseStorageService
+            supabase_service = SupabaseStorageService()
+            supabase_config = {
+                "supabase_url": supabase_service.supabase_url,
+                "supabase_key_configurado": bool(supabase_service.supabase_key),
+                "supabase_key_preview": supabase_service.supabase_key[:10] + "..." if supabase_service.supabase_key else "No configurado",
+                "bucket_name": supabase_service.bucket_name,
+                "bucket_accesible": supabase_service.verificar_bucket_existe()
+            }
+        except Exception as e:
+            supabase_config = {
+                "error": str(e),
+                "status": "failed"
+            }
+        
         return {
             "status": "success",
-            "message": "Configuración de WHAPI",
-            "config": config_info
+            "message": "Configuración de WHAPI y Supabase",
+            "whapi": config_info,
+            "supabase": supabase_config
         }
         
     except Exception as e:

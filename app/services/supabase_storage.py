@@ -37,12 +37,18 @@ class SupabaseStorageService:
         Verificar si el bucket existe y está disponible
         """
         try:
+            logger.info(f"🔍 Verificando bucket: {self.bucket_name}")
+            logger.info(f"🔗 Supabase URL: {self.supabase_url}")
+            logger.info(f"🔑 Supabase Key: {self.supabase_key[:10]}...")
+            
             # Intentar obtener el bucket
-            self.supabase.storage.get_bucket(self.bucket_name)
+            bucket_info = self.supabase.storage.get_bucket(self.bucket_name)
             logger.info(f"✅ Bucket '{self.bucket_name}' existe y está disponible")
+            logger.info(f"📊 Bucket info: {bucket_info}")
             return True
         except Exception as e:
             logger.error(f"❌ Error accediendo al bucket '{self.bucket_name}': {e}")
+            logger.error(f"🔍 Tipo de error: {type(e).__name__}")
             return False
     
     def subir_pdf(self, pdf_base64: str, nombre_archivo: str, metadata: Dict[str, Any] = None) -> Dict[str, Any]:
