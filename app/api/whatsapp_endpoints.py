@@ -521,13 +521,19 @@ async def options_recibo_listo():
 @router.post("/enviar-pdf")
 async def enviar_pdf_whatsapp(
     request: PDFRequest,
-    whatsapp_service: WhatsAppService = Depends(get_whatsapp_service)
+    whatsapp_supabase_service: WhatsAppSupabaseService = Depends(get_whatsapp_supabase_service)
 ):
     """
-    Endpoint mejorado para enviar PDF con debugging completo
+    Endpoint principal para enviar PDF con Supabase Storage automático
+    
+    Flujo:
+    1. Recibe PDF del frontend
+    2. Sube a Supabase Storage
+    3. Obtiene URL pública
+    4. Envía por WhatsApp
+    5. Retorna respuesta al frontend
     
     Endpoint: POST /whatsapp/enviar-pdf
-    URL WHAPI: https://gate.whapi.cloud/messages/document
     """
     try:
         # 🔍 LOGGING DETALLADO
@@ -555,30 +561,26 @@ async def enviar_pdf_whatsapp(
         mensaje_personalizado = crear_mensaje_pdf(request.metadata, request.nombre_archivo)
         logger.info(f"💬 Mensaje: {mensaje_personalizado}")
         
-        # 🔧 CONFIGURACIÓN WHAPI
-        whapi_url = f"{whatsapp_service.base_url.rstrip('/')}/messages/document"
-        logger.info(f"🌐 URL WHAPI: {whapi_url}")
-        logger.info(f"🔑 Token configurado: {'Sí' if whatsapp_service.whapi_token else 'No'}")
-        
-        # ✅ ENVIAR A WHAPI
-        logger.info("🚀 Enviando a WHAPI...")
-        resultado = whatsapp_service.enviar_documento_base64(
-            telefono_formateado,  # Usar teléfono formateado
+        # ✅ ENVIAR CON SUPABASE (AUTOMÁTICO)
+        logger.info("🚀 Enviando con Supabase Storage...")
+        resultado = whatsapp_supabase_service.enviar_pdf_con_supabase(
+            telefono_formateado,
             request.pdf_base64,
             request.nombre_archivo,
-            mensaje_personalizado
+            mensaje_personalizado,
+            request.metadata
         )
         
         # 📊 RESPUESTA
-        logger.info(f"📨 Respuesta WHAPI: {resultado}")
+        logger.info(f"📨 Resultado: {resultado}")
         
         if "error" in resultado:
-            error_msg = f"Error WHAPI: {resultado['error']}"
+            error_msg = f"Error enviando PDF: {resultado['error']}"
             logger.error(f"❌ {error_msg}")
             raise HTTPException(status_code=400, detail=error_msg)
         
         # ✅ ÉXITO
-        logger.info(f"✅ PDF enviado exitosamente a {telefono_formateado}")
+        logger.info(f"✅ PDF enviado exitosamente con Supabase a {telefono_formateado}")
         logger.info("=" * 80)
         
         return {
@@ -587,8 +589,9 @@ async def enviar_pdf_whatsapp(
             "numero_telefono": telefono_formateado,
             "archivo": request.nombre_archivo,
             "tamaño_mb": validacion["tamaño_mb"],
+            "url_supabase": resultado.get("url_supabase"),
             "metadata": request.metadata,
-            "whapi_response": resultado
+            "whapi_response": resultado.get("whatsapp_result")
         }
         
     except HTTPException:
