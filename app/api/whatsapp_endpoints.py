@@ -397,7 +397,7 @@ async def debug_config():
             "whapi_token_preview": whatsapp_service.whapi_token[:10] + "..." if whatsapp_service.whapi_token else "No configurado",
             "urls_generadas": {
                 "mensaje": f"{whatsapp_service.base_url.rstrip('/')}/messages/text",
-                "documento": f"{whatsapp_service.base_url.rstrip('/')}/messages/documents",
+                "documento": f"{whatsapp_service.base_url.rstrip('/')}/messages/document",
                 "status": f"{whatsapp_service.base_url.rstrip('/')}/status"
             }
         }

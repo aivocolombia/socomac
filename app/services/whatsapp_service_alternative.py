@@ -28,6 +28,7 @@ class WhatsAppServiceAlternative:
         
         # Lista de endpoints a probar
         endpoints = [
+            f"{base_url}/messages/document",
             f"{base_url}/messages/documents",
             f"{base_url}/messages",
             f"{base_url}/messages/media",

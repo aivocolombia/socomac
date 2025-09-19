@@ -92,7 +92,7 @@ class WhatsAppService:
         
         # ✅ URL CORREGIDA - Endpoint correcto para documentos
         base_url = self.base_url.rstrip('/')
-        url = f"{base_url}/messages/documents"
+        url = f"{base_url}/messages/document"
         
         headers = {
             "Authorization": f"Bearer {self.whapi_token}",
@@ -149,7 +149,7 @@ class WhatsAppService:
         
         # ✅ URL CORREGIDA - Endpoint correcto para documentos
         base_url = self.base_url.rstrip('/')
-        url = f"{base_url}/messages/documents"
+        url = f"{base_url}/messages/document"
         
         headers = {
             "Authorization": f"Bearer {self.whapi_token}",
