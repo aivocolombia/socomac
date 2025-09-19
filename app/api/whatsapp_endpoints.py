@@ -919,65 +919,33 @@ async def subir_pdf_storage_only(
         logger.info("📤 Subiendo PDF solo al storage de Supabase...")
         logger.info(f"📄 Archivo: {request.nombre_archivo}")
         
-        import base64
-        import uuid
-        from datetime import datetime
+        from app.services.supabase_storage import SupabaseStorageService
+        supabase_service = SupabaseStorageService()
         
-        # Crear cliente de Supabase usando variables de entorno
-        from supabase import create_client
-        import os
-        
-        supabase_url = os.getenv('SUPABASE_URL')
-        supabase_key = os.getenv('SUPABASE_KEY')
-        
-        if not supabase_url or not supabase_key:
-            return {
-                "status": "error",
-                "message": "Variables de entorno de Supabase no configuradas",
-                "error": "SUPABASE_URL y SUPABASE_KEY deben estar configurados"
-            }
-        
-        supabase = create_client(supabase_url, supabase_key)
-        
-        # Generar nombre único
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        unique_id = str(uuid.uuid4())[:8]
-        nombre_unico = f"{timestamp}_{unique_id}_{request.nombre_archivo}"
-        
-        # Decodificar base64
-        pdf_bytes = base64.b64decode(request.pdf_base64)
-        
-        # Subir archivo directamente al storage
-        result = supabase.storage.from_("receipt").upload(
-            nombre_unico,
-            pdf_bytes,
-            file_options={
-                "content-type": "application/pdf",
-                "cache-control": "3600"
-            }
+        # Usar el nuevo método que solo sube al storage
+        resultado = supabase_service.subir_pdf_solo_storage(
+            request.pdf_base64,
+            request.nombre_archivo
         )
         
-        if result.get("error"):
-            logger.error(f"❌ Error subiendo archivo: {result['error']}")
+        if resultado.get("status") == "success":
+            logger.info(f"✅ PDF subido exitosamente: {resultado.get('url_publica')}")
+            
+            return {
+                "status": "success",
+                "message": "PDF subido exitosamente a Supabase Storage",
+                "archivo_nombre": resultado.get("archivo_nombre"),
+                "url_publica": resultado.get("url_publica"),
+                "tamaño_bytes": resultado.get("tamaño_bytes"),
+                "timestamp": resultado.get("timestamp")
+            }
+        else:
+            logger.error(f"❌ Error subiendo PDF: {resultado.get('error')}")
             return {
                 "status": "error",
-                "message": "Error subiendo archivo a Supabase Storage",
-                "error": result['error']
+                "message": "Error subiendo PDF a Supabase Storage",
+                "error": resultado.get("error")
             }
-        
-        # Obtener URL pública
-        public_url = supabase.storage.from_("receipt").get_public_url(nombre_unico)
-        
-        logger.info(f"✅ PDF subido exitosamente: {public_url}")
-        
-        return {
-            "status": "success",
-            "message": "PDF subido exitosamente a Supabase Storage",
-            "archivo_nombre": nombre_unico,
-            "url_publica": public_url,
-            "tamaño_bytes": len(pdf_bytes),
-            "timestamp": datetime.now().isoformat()
-        }
         
     except Exception as e:
         logger.error(f"❌ Error inesperado: {str(e)}")

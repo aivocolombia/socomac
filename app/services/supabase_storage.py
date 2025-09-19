@@ -158,6 +158,59 @@ class SupabaseStorageService:
             logger.error(f"❌ Error eliminando archivo: {e}")
             return False
     
+    def subir_pdf_solo_storage(self, pdf_base64: str, nombre_archivo: str) -> Dict[str, Any]:
+        """
+        Subir PDF solo al storage de Supabase (sin base de datos)
+        
+        Args:
+            pdf_base64: PDF en base64
+            nombre_archivo: Nombre del archivo
+            
+        Returns:
+            Dict con información del archivo subido
+        """
+        try:
+            logger.info(f"📤 Subiendo PDF solo al storage: {nombre_archivo}")
+            
+            # Generar nombre único
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            unique_id = str(uuid.uuid4())[:8]
+            nombre_unico = f"{timestamp}_{unique_id}_{nombre_archivo}"
+            
+            # Decodificar base64
+            pdf_bytes = base64.b64decode(pdf_base64)
+            
+            # Subir archivo directamente al storage
+            result = self.supabase.storage.from_(self.bucket_name).upload(
+                nombre_unico,
+                pdf_bytes,
+                file_options={
+                    "content-type": "application/pdf",
+                    "cache-control": "3600"
+                }
+            )
+            
+            if result.get("error"):
+                logger.error(f"❌ Error subiendo archivo: {result['error']}")
+                return {"error": f"Error subiendo archivo: {result['error']}", "status": "failed"}
+            
+            # Obtener URL pública
+            public_url = self.supabase.storage.from_(self.bucket_name).get_public_url(nombre_unico)
+            
+            logger.info(f"✅ PDF subido exitosamente: {public_url}")
+            
+            return {
+                "status": "success",
+                "archivo_nombre": nombre_unico,
+                "url_publica": public_url,
+                "tamaño_bytes": len(pdf_bytes),
+                "timestamp": datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            logger.error(f"❌ Error subiendo PDF: {str(e)}")
+            return {"error": f"Error subiendo PDF: {str(e)}", "status": "failed"}
+
     def listar_archivos(self, limite: int = 50) -> Dict[str, Any]:
         """
         Listar archivos en el bucket
