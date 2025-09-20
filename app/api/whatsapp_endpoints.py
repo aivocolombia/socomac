@@ -1003,6 +1003,63 @@ async def subir_pdf_directo(
             "error": str(e)
         }
 
+@router.post("/enviar-pdf-whapi")
+async def enviar_pdf_whapi(
+    request: PDFRequest
+):
+    """
+    Endpoint para enviar PDF por WhatsApp usando el formato correcto de WHAPI
+    """
+    try:
+        logger.info("📤 Enviando PDF por WhatsApp con formato correcto...")
+        logger.info(f"📄 Archivo: {request.nombre_archivo}")
+        
+        from app.services.whatsapp_service import WhatsAppService
+        whatsapp_service = WhatsAppService()
+        
+        # Usar la URL del PDF que ya está en Supabase
+        pdf_url = "https://rixvqufnzasolxxklaue.supabase.co/storage/v1/object/public/receipt/Recibo_Caja_81_2025-09-18.pdf"
+        nombre_archivo = "Recibo_Caja_81_2025-09-18.pdf"
+        mensaje = f"📄 Recibo de Caja SOCOMAC\n\nArchivo: {nombre_archivo}\n\nEste es un recibo enviado desde el sistema."
+        
+        # Formatear teléfono
+        telefono_formateado = formatear_telefono_colombia(request.numero_telefono)
+        
+        # Enviar documento usando el formato correcto
+        resultado = whatsapp_service.enviar_documento(
+            telefono_formateado,
+            pdf_url,
+            nombre_archivo,
+            mensaje
+        )
+        
+        if resultado.get("status") == "success":
+            logger.info(f"✅ PDF enviado exitosamente: {resultado}")
+            
+            return {
+                "status": "success",
+                "message": "PDF enviado exitosamente por WhatsApp",
+                "numero_telefono": telefono_formateado,
+                "archivo": nombre_archivo,
+                "url_documento": pdf_url,
+                "whapi_response": resultado.get("whatsapp_response")
+            }
+        else:
+            logger.error(f"❌ Error enviando PDF: {resultado.get('error')}")
+            return {
+                "status": "error",
+                "message": "Error enviando PDF por WhatsApp",
+                "error": resultado.get("error")
+            }
+            
+    except Exception as e:
+        logger.error(f"❌ Error inesperado: {str(e)}")
+        return {
+            "status": "error",
+            "message": "Error interno del servidor",
+            "error": str(e)
+        }
+
 @router.get("/debug-config")
 async def debug_config():
     """

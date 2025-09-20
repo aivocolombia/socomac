@@ -104,12 +104,10 @@ class WhatsAppService:
         
         payload = {
             "to": numero_telefono,
-            "type": "document",
-            "document": {
-                "link": documento_url,
-                "filename": nombre_archivo,
-                "caption": mensaje
-            }
+            "media": documento_url,
+            "mime_type": "application/pdf",
+            "filename": nombre_archivo,
+            "caption": mensaje
         }
         
         try:
