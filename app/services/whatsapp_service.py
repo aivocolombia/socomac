@@ -103,9 +103,9 @@ class WhatsAppService:
         }
         
         payload = {
-            "to": numero_telefono,
+            "to": numero_telefono + "@s.whatsapp.net",
             "media": documento_url,
-            "mime_type": "application/pdf",
+            "mime_type": "appliction/pdf",
             "filename": nombre_archivo,
             "caption": mensaje
         }
