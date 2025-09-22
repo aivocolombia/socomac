@@ -944,7 +944,7 @@ async def subir_pdf_storage_only(
             return {
                 "status": "error",
                 "message": "Error subiendo PDF a Supabase Storage",
-                "error": resultado.get("error")
+                "error": resultado.get("error") 
             }
         
     except Exception as e:

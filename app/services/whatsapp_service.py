@@ -1,6 +1,7 @@
 import requests
 import os
 import logging
+import re
 from typing import Optional, Dict, Any
 from datetime import datetime
 
@@ -12,6 +13,10 @@ class WhatsAppService:
     def __init__(self):
         self.whapi_token = os.getenv('WHAPI_TOKEN')
         self.base_url = os.getenv('WHAPI_BASE_URL', 'https://gate.whapi.cloud')
+        self.footer_caption = (
+            "Si necesitas alguna peticion o reclamo, "
+            "por favor comunicate con el numero 3100000"
+        )
         
         # Logging de configuración
         logger.info(f"WHAPI_BASE_URL configurado: {self.base_url}")
@@ -102,12 +107,19 @@ class WhatsAppService:
             "Content-Type": "application/json"
         }
         
+        # Normalizar número: solo dígitos (WHAPI espera chat_id con número sin '+')
+        phone_digits = re.sub(r"[^0-9]", "", numero_telefono or "")
+        chat_id = f"{phone_digits}@s.whatsapp.net"
+
+        # Combinar mensaje del usuario con el pie de página obligatorio
+        final_caption = self.footer_caption if not mensaje else f"{mensaje}\n\n{self.footer_caption}"
+
         payload = {
-            "to": numero_telefono + "@s.whatsapp.net",
+            "to": chat_id,
             "media": documento_url,
-            "mime_type": "appliction/pdf",
+            "mime_type": "application/pdf",
             "filename": nombre_archivo,
-            "caption": mensaje
+            "caption": final_caption
         }
         
         try:
@@ -125,8 +137,12 @@ class WhatsAppService:
             }
             
         except requests.exceptions.RequestException as e:
+            status_code = getattr(e.response, 'status_code', 'N/A')
+            text = getattr(e.response, 'text', 'N/A')
             logger.error(f"Error al enviar documento: {str(e)}")
-            return {"error": f"Error al enviar documento: {str(e)}", "status": "failed"}
+            logger.error(f"WHAPI status: {status_code}")
+            logger.error(f"WHAPI body: {text}")
+            return {"error": f"Error al enviar documento: {str(e)}", "status": "failed", "whapi_status": status_code, "whapi_body": text}
             
         except Exception as e:
             logger.error(f"Error inesperado al enviar documento: {str(e)}")
@@ -226,12 +242,15 @@ class WhatsAppService:
             "Content-Type": "application/json"
         }
         
+        # Combinar mensaje del usuario con el pie de página obligatorio
+        final_caption = self.footer_caption if not mensaje else f"{mensaje}\n\n{self.footer_caption}"
+
         payload = {
             "to": numero_telefono,
             "type": "document",
             "document": {
                 "id": document_id,
-                "caption": mensaje
+                "caption": final_caption
             }
         }
         

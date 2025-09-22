@@ -102,12 +102,30 @@ class SupabaseStorageService:
                 }
             )
             
-            if result.get("error"):
-                logger.error(f"❌ Error subiendo archivo: {result['error']}")
-                return {"error": f"Error subiendo archivo: {result['error']}", "status": "failed"}
+            # Manejar posibles errores del UploadResponse (objeto, no dict)
+            upload_error = None
+            try:
+                if hasattr(result, "error") and result.error:
+                    upload_error = str(result.error)
+            except Exception:
+                pass
+            if upload_error:
+                logger.error(f"❌ Error subiendo archivo: {upload_error}")
+                return {"error": f"Error subiendo archivo: {upload_error}", "status": "failed"}
             
-            # Obtener URL pública
-            public_url = self.supabase.storage.from_(self.bucket_name).get_public_url(nombre_unico)
+            # Obtener URL pública (puede ser str o dict dependiendo de la versión del SDK)
+            public_url_resp = self.supabase.storage.from_(self.bucket_name).get_public_url(nombre_unico)
+            public_url = None
+            if isinstance(public_url_resp, str):
+                public_url = public_url_resp
+            elif isinstance(public_url_resp, dict):
+                public_url = (
+                    public_url_resp.get("publicURL")
+                    or public_url_resp.get("public_url")
+                    or (public_url_resp.get("data") or {}).get("publicUrl")
+                )
+            if not public_url:
+                public_url = f"{self.supabase_url}/storage/v1/object/public/{self.bucket_name}/{nombre_unico}"
             
             # Guardar metadatos en base de datos (opcional) - DESHABILITADO por RLS
             # if metadata:
@@ -190,12 +208,30 @@ class SupabaseStorageService:
                 }
             )
             
-            if result.get("error"):
-                logger.error(f"❌ Error subiendo archivo: {result['error']}")
-                return {"error": f"Error subiendo archivo: {result['error']}", "status": "failed"}
+            # Manejar posibles errores del UploadResponse
+            upload_error = None
+            try:
+                if hasattr(result, "error") and result.error:
+                    upload_error = str(result.error)
+            except Exception:
+                pass
+            if upload_error:
+                logger.error(f"❌ Error subiendo archivo: {upload_error}")
+                return {"error": f"Error subiendo archivo: {upload_error}", "status": "failed"}
             
-            # Obtener URL pública
-            public_url = self.supabase.storage.from_(self.bucket_name).get_public_url(nombre_unico)
+            # Obtener URL pública (str o dict)
+            public_url_resp = self.supabase.storage.from_(self.bucket_name).get_public_url(nombre_unico)
+            public_url = None
+            if isinstance(public_url_resp, str):
+                public_url = public_url_resp
+            elif isinstance(public_url_resp, dict):
+                public_url = (
+                    public_url_resp.get("publicURL")
+                    or public_url_resp.get("public_url")
+                    or (public_url_resp.get("data") or {}).get("publicUrl")
+                )
+            if not public_url:
+                public_url = f"{self.supabase_url}/storage/v1/object/public/{self.bucket_name}/{nombre_unico}"
             
             logger.info(f"✅ PDF subido exitosamente: {public_url}")
             
