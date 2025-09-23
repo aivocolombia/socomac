@@ -68,6 +68,18 @@ class WhatsAppSupabaseService:
             
             logger.info(f"✅ PDF enviado exitosamente por WhatsApp")
             
+            # Paso 3: Eliminar el archivo de Supabase tras el envío exitoso
+            eliminado = False
+            try:
+                archivo_subido = upload_result.get("archivo_nombre")
+                if archivo_subido:
+                    eliminado = self.supabase_service.eliminar_archivo(archivo_subido)
+                    logger.info(f"🗑️ Eliminación de archivo en Supabase ({archivo_subido}): {eliminado}")
+                else:
+                    logger.warning("⚠️ No se encontró 'archivo_nombre' para eliminar")
+            except Exception as del_err:
+                logger.error(f"⚠️ No se pudo eliminar el archivo subido: {del_err}")
+
             return {
                 "status": "success",
                 "message": "PDF enviado exitosamente (Supabase + WHAPI)",
@@ -76,6 +88,7 @@ class WhatsAppSupabaseService:
                 "url_supabase": url_publica,
                 "supabase_result": upload_result,
                 "whatsapp_result": whatsapp_result,
+                "archivo_eliminado": eliminado,
                 "timestamp": datetime.now().isoformat()
             }
             
