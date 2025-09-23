@@ -170,25 +170,19 @@ def formatear_telefono_colombia(telefono: str) -> str:
     
     # Si empieza con 57, agregar +
     if telefono_limpio.startswith('57') and len(telefono_limpio) == 12:
-        resultado = f"+{telefono_limpio}"
+        resultado = f"{telefono_limpio}"
         logger.info(f"📱 Formato 57XXXXXXXXXX: {resultado}")
         return resultado
-    
-    # Si empieza con +57, mantener
-    if telefono_limpio.startswith('+57') and len(telefono_limpio) == 13:
-        resultado = telefono_limpio
-        logger.info(f"📱 Formato +57XXXXXXXXXX: {resultado}")
-        return resultado
-    
+
     # Si empieza con 3, agregar +57
     if telefono_limpio.startswith('3') and len(telefono_limpio) == 10:
-        resultado = f"+57{telefono_limpio}"
+        resultado = f"57{telefono_limpio}"
         logger.info(f"📱 Formato 3XXXXXXXXX: {resultado}")
         return resultado
     
     # Si es de 10 dígitos, agregar +57
     if len(telefono_limpio) == 10 and telefono_limpio.isdigit():
-        resultado = f"+57{telefono_limpio}"
+        resultado = f"57{telefono_limpio}"
         logger.info(f"📱 Formato XXXXXXXXXX: {resultado}")
         return resultado
     
@@ -281,80 +275,6 @@ def log_solicitud_pdf(request: PDFRequest):
         logger.info(f"📱 Teléfono formateado: {telefono_formateado}")
     except Exception as e:
         logger.error(f"❌ Error formateando teléfono: {e}")
-
-def crear_pdf_prueba() -> bytes:
-    """
-    Crear un PDF de prueba mínimo
-    """
-    pdf_content = """%PDF-1.4
-1 0 obj
-<<
-/Type /Catalog
-/Pages 2 0 R
->>
-endobj
-
-2 0 obj
-<<
-/Type /Pages
-/Kids [3 0 R]
-/Count 1
->>
-endobj
-
-3 0 obj
-<<
-/Type /Page
-/Parent 2 0 R
-/MediaBox [0 0 612 792]
-/Contents 4 0 R
-/Resources <<
-/Font <<
-/F1 5 0 R
->>
->>
->>
-endobj
-
-4 0 obj
-<<
-/Length 44
->>
-stream
-BT
-/F1 12 Tf
-72 720 Td
-(Test PDF) Tj
-ET
-endstream
-endobj
-
-5 0 obj
-<<
-/Type /Font
-/Subtype /Type1
-/BaseFont /Helvetica
->>
-endobj
-
-xref
-0 6
-0000000000 65535 f 
-0000000009 00000 n 
-0000000058 00000 n 
-0000000115 00000 n 
-0000000274 00000 n 
-0000000368 00000 n 
-trailer
-<<
-/Size 6
-/Root 1 0 R
->>
-startxref
-465
-%%EOF"""
-    
-    return pdf_content.encode('utf-8')
 
 @router.post("/enviar-mensaje")
 async def enviar_mensaje_whatsapp(
